@@ -1,0 +1,95 @@
+# Node.js / frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production
+/dist/
+/build/
+
+# Logs
+logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.sqlite
+*.sqlite3
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# Python / backend / ML services
+__pycache__/
+*.py[cod]
+*.pyo
+*.env
+*.venv/
+venv/
+env/
+*.egg-info/
+*.sqlite3
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Docker / Podman
+*.pid
+*.sock
+*.log
+docker-compose.override.yml
+*.local
+**/compose.override.yml
+
+# Podman volumes or temporary storage
+podman-data/
+*.tmp
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Frontend local settings
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Optional: Ignore generated documentation
+docs/_build/

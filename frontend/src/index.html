@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoklyAI - Swedish Accounting AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">BoklyAI Registration</h1>
+            
+            <form id="registrationForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label for="firstName" class="block text-sm font-medium text-gray-700">First Name</label>
+                    <input type="text" id="firstName"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label for="lastName" class="block text-sm font-medium text-gray-700">Last Name</label>
+                    <input type="text" id="lastName"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <button type="submit"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Register
+                </button>
+            </form>
+            
+            <div id="message" class="mt-4 text-center"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch('http://localhost:3000/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password, firstName, lastName }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `<p class="text-green-600">Registration successful! Welcome, ${data.firstName || data.email}!</p>`;
+                    document.getElementById('registrationForm').reset();
+                } else {
+                    messageDiv.innerHTML = `<p class="text-red-600">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<p class="text-red-600">Network error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

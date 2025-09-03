@@ -1,0 +1,70 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Cache node_modules
+      uses: actions/cache@v3
+      with:
+        path: ./backend/node_modules
+        key: backend-node-modules-${{ hashFiles('./backend/package-lock.json') }}
+        restore-keys: |
+          backend-node-modules-
+    - run: npm ci
+      working-directory: ./backend
+    - run: npm test
+      working-directory: ./backend
+      
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Cache node_modules
+      uses: actions/cache@v3
+      with:
+        path: ./frontend/node_modules
+        key: frontend-node-modules-${{ hashFiles('./frontend/package-lock.json') }}
+        restore-keys: |
+          frontend-node-modules-
+    - run: npm ci
+      working-directory: ./frontend
+    - run: npm test
+      working-directory: ./frontend
+    - run: npm run lint
+      working-directory: ./frontend
+
+  test-ai:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: python-${{ runner.os }}-pip-${{ hashFiles('./ai-services/requirements.txt') }}
+        restore-keys: |
+          python-${{ runner.os }}-pip-
+    - run: pip install -r requirements.txt
+      working-directory: ./ai-services
+    - run: python -m pytest
+      working-directory: ./ai-services

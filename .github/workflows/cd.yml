@@ -1,0 +1,43 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+    - uses: actions/checkout@v3
+    - name: Deploy to Staging
+      run: |
+        # Add your deployment commands here
+        echo "Deploying to staging environment"
+        # Build and deploy backend
+        cd backend
+        npm ci
+        npm run build
+        # Build and deploy frontend
+        cd ../frontend
+        npm ci
+        npm run build
+        
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production
+    needs: deploy-staging
+    steps:
+    - uses: actions/checkout@v3
+    - name: Deploy to Production
+      run: |
+        # Add your production deployment commands
+        echo "Deploying to production environment"
+        # Build and deploy backend
+        cd backend
+        npm ci
+        npm run build
+        # Build and deploy frontend
+        cd ../frontend
+        npm ci
+        npm run build

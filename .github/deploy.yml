@@ -1,0 +1,68 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test
+        
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+        
+  deploy-staging:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Deploy to staging
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        script: |
+          cd /var/www/boklyai
+          git pull origin main
+          docker-compose up -d --build

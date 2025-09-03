@@ -1,0 +1,9 @@
+# AI Services Requirements
+tensorflow==2.13.0
+torch==2.0.1
+spacy==3.6.1
+pytesseract==0.3.10
+weaviate-client==3.24.1
+pinecone-client==2.2.1
+pytest==7.4.2
+python-dotenv==1.0.0

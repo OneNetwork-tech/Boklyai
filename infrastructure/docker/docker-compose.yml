@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15
+    container_name: boklyai-postgres
+    environment:
+      POSTGRES_USER: boklyai
+      POSTGRES_PASSWORD: boklyai_password
+      POSTGRES_DB: boklyai_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - boklyai-network
+
+  # Redis cache
+  redis:
+    image: redis:7
+    container_name: boklyai-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - boklyai-network
+
+  # Backend service
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: boklyai-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://boklyai:boklyai_password@postgres:5432/boklyai_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - boklyai-network
+
+  # Frontend service
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: boklyai-frontend
+    ports:
+      - "3001:3000"
+    networks:
+      - boklyai-network
+
+volumes:
+  postgres_data:
+
+networks:
+  boklyai-network:
+    driver: bridge
