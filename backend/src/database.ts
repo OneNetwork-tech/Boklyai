@@ -5,6 +5,21 @@ import { Account } from './Account';
 import { Transaction } from './Transaction';
 import { Company } from './Company';
 import { Document } from './Document';
+import { Bank } from './Bank';
+import { BankAccount } from './BankAccount';
+import { BankTransaction } from './BankTransaction';
+import { TaxRate } from './TaxRate';
+import { TaxRule } from './TaxRule';
+import { TaxReport } from './TaxReport';
+import { Category } from './Category';
+import { TransactionCategory } from './TransactionCategory';
+import { CategorizationFeedback } from './CategorizationFeedback';
+import { Customer } from './Customer';
+import { Vendor } from './Vendor';
+import { Invoice } from './Invoice';
+import { Bill } from './Bill';
+import { InvoiceItem } from './InvoiceItem';
+import { BillItem } from './BillItem';
 
 // In production, these values should come from environment variables
 export const AppDataSource = new DataSource({
@@ -16,7 +31,29 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'boklyai_db',
   synchronize: process.env.NODE_ENV !== 'production', // Only for development
   logging: false,
-  entities: [User, ChartOfAccounts, Account, Transaction, Company, Document],
+  entities: [
+    User, 
+    ChartOfAccounts, 
+    Account, 
+    Transaction, 
+    Company, 
+    Document, 
+    Bank, 
+    BankAccount, 
+    BankTransaction,
+    TaxRate,
+    TaxRule,
+    TaxReport,
+    Category,
+    TransactionCategory,
+    CategorizationFeedback,
+    Customer,
+    Vendor,
+    Invoice,
+    Bill,
+    InvoiceItem,
+    BillItem
+  ],
   subscribers: [],
   migrations: [],
 });

@@ -1,13 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { User } from './User';
-import { Document } from './Document';
-import { BankAccount } from './BankAccount';
-import { TaxReport } from './TaxReport';
 import { Invoice } from './Invoice';
-import { Bill } from './Bill';
 
-@Entity('companies')
-export class Company {
+@Entity('customers')
+export class Customer {
   @PrimaryGeneratedColumn()
   id!: number;
 
@@ -21,6 +16,15 @@ export class Company {
   vatNumber!: string;
 
   @Column({ nullable: true })
+  contactPerson!: string;
+
+  @Column({ nullable: true })
+  email!: string;
+
+  @Column({ nullable: true })
+  phone!: string;
+
+  @Column({ nullable: true })
   address!: string;
 
   @Column({ nullable: true })
@@ -32,6 +36,9 @@ export class Company {
   @Column({ nullable: true })
   country!: string;
 
+  @Column({ type: 'text', nullable: true })
+  notes!: string;
+
   @Column({ default: true })
   isActive!: boolean;
 
@@ -41,21 +48,6 @@ export class Company {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @OneToMany(() => User, user => user.company)
-  employees!: User[];
-
-  @OneToMany(() => Document, document => document.company)
-  documents!: Document[];
-
-  @OneToMany(() => BankAccount, bankAccount => bankAccount.company)
-  bankAccounts!: BankAccount[];
-
-  @OneToMany(() => TaxReport, taxReport => taxReport.company)
-  taxReports!: TaxReport[];
-
-  @OneToMany(() => Invoice, invoice => invoice.company)
+  @OneToMany(() => Invoice, invoice => invoice.customer)
   invoices!: Invoice[];
-
-  @OneToMany(() => Bill, bill => bill.company)
-  bills!: Bill[];
 }

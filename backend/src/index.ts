@@ -8,6 +8,11 @@ import { TransactionService } from './TransactionService';
 import { CompanyService } from './CompanyService';
 import { DocumentService } from './DocumentService';
 import { OcrService } from './OcrService';
+import { BankService } from './BankService';
+import { TaxService } from './TaxService';
+import { AICategorizationService } from './AICategorizationService';
+import { InvoiceService } from './InvoiceService';
+import { BillService } from './BillService';
 import { generateUniqueFilename, ensureUploadDir, saveFileBuffer, getFileBuffer } from './fileUtils';
 import path from 'path';
 
@@ -29,6 +34,11 @@ const transactionService = new TransactionService();
 const companyService = new CompanyService();
 const documentService = new DocumentService();
 const ocrService = new OcrService();
+const bankService = new BankService();
+const taxService = new TaxService();
+const aiCategorizationService = new AICategorizationService();
+const invoiceService = new InvoiceService();
+const billService = new BillService();
 
 // Ensure upload directory exists
 ensureUploadDir(UPLOAD_DIR).catch(error => {
@@ -349,6 +359,472 @@ app.post('/documents/:id/process-ocr', async (req: Request, res: Response) => {
       await documentService.updateDocumentStatus(id, 'ERROR');
     }
     res.status(500).json({ error: 'OCR processing failed' });
+  }
+});
+
+// Bank integration endpoints
+app.post('/banks', async (req: Request, res: Response) => {
+  try {
+    const { name, code, description, apiUrl, authType } = req.body;
+    const bank = await bankService.createBank(name, code, description, apiUrl, authType);
+    res.status(201).json(bank);
+  } catch (error) {
+    console.error('Bank creation error:', error);
+    res.status(500).json({ error: 'Bank creation failed' });
+  }
+});
+
+app.get('/banks', async (req: Request, res: Response) => {
+  try {
+    const banks = await bankService.getAllBanks();
+    res.status(200).json(banks);
+  } catch (error) {
+    console.error('Error fetching banks:', error);
+    res.status(500).json({ error: 'Failed to fetch banks' });
+  }
+});
+
+app.post('/bank-accounts', async (req: Request, res: Response) => {
+  try {
+    const { companyId, bankId, accountName, accountNumber, iban, bic } = req.body;
+    const bankAccount = await bankService.createBankAccount(
+      companyId,
+      bankId,
+      accountName,
+      accountNumber,
+      iban,
+      bic
+    );
+    res.status(201).json(bankAccount);
+  } catch (error) {
+    console.error('Bank account creation error:', error);
+    res.status(500).json({ error: 'Bank account creation failed' });
+  }
+});
+
+app.get('/companies/:id/bank-accounts', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const bankAccounts = await bankService.getBankAccountsByCompany(companyId);
+    res.status(200).json(bankAccounts);
+  } catch (error) {
+    console.error('Error fetching bank accounts:', error);
+    res.status(500).json({ error: 'Failed to fetch bank accounts' });
+  }
+});
+
+app.post('/bank-accounts/:id/import-transactions', async (req: Request, res: Response) => {
+  try {
+    const bankAccountId = parseInt(req.params.id);
+    const { transactions } = req.body;
+    
+    const importedTransactions = await bankService.importBankTransactions(bankAccountId, transactions);
+    res.status(201).json(importedTransactions);
+  } catch (error) {
+    console.error('Transaction import error:', error);
+    res.status(500).json({ error: 'Transaction import failed' });
+  }
+});
+
+app.get('/bank-accounts/:id/transactions', async (req: Request, res: Response) => {
+  try {
+    const bankAccountId = parseInt(req.params.id);
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    const transactions = await bankService.getBankTransactions(bankAccountId, limit);
+    res.status(200).json(transactions);
+  } catch (error) {
+    console.error('Error fetching bank transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch bank transactions' });
+  }
+});
+
+app.post('/bank-transactions/:id/find-matches', async (req: Request, res: Response) => {
+  try {
+    const bankTransactionId = parseInt(req.params.id);
+    const matches = await bankService.findTransactionMatches(bankTransactionId);
+    res.status(200).json(matches);
+  } catch (error) {
+    console.error('Error finding transaction matches:', error);
+    res.status(500).json({ error: 'Failed to find transaction matches' });
+  }
+});
+
+app.post('/bank-transactions/:id/mark-matched', async (req: Request, res: Response) => {
+  try {
+    const bankTransactionId = parseInt(req.params.id);
+    const { matchedTransactionId } = req.body;
+    
+    const updatedTransaction = await bankService.markTransactionAsMatched(bankTransactionId, matchedTransactionId);
+    res.status(200).json(updatedTransaction);
+  } catch (error) {
+    console.error('Error marking transaction as matched:', error);
+    res.status(500).json({ error: 'Failed to mark transaction as matched' });
+  }
+});
+
+// VAT and Tax endpoints
+app.post('/tax-rates', async (req: Request, res: Response) => {
+  try {
+    const { name, rate, description, isDefault } = req.body;
+    const taxRate = await taxService.createTaxRate(name, rate, description, isDefault);
+    res.status(201).json(taxRate);
+  } catch (error) {
+    console.error('Tax rate creation error:', error);
+    res.status(500).json({ error: 'Tax rate creation failed' });
+  }
+});
+
+app.get('/tax-rates', async (req: Request, res: Response) => {
+  try {
+    const taxRates = await taxService.getAllTaxRates();
+    res.status(200).json(taxRates);
+  } catch (error) {
+    console.error('Error fetching tax rates:', error);
+    res.status(500).json({ error: 'Failed to fetch tax rates' });
+  }
+});
+
+app.post('/tax-rules', async (req: Request, res: Response) => {
+  try {
+    const { accountId, taxRateId, name, description, validFrom, validTo } = req.body;
+    const taxRule = await taxService.createTaxRule(
+      accountId,
+      taxRateId,
+      name,
+      description,
+      validFrom ? new Date(validFrom) : undefined,
+      validTo ? new Date(validTo) : undefined
+    );
+    res.status(201).json(taxRule);
+  } catch (error) {
+    console.error('Tax rule creation error:', error);
+    res.status(500).json({ error: 'Tax rule creation failed' });
+  }
+});
+
+app.post('/tax-calculate', async (req: Request, res: Response) => {
+  try {
+    const { amount, taxRateId } = req.body;
+    const vatAmount = await taxService.calculateVAT(amount, taxRateId);
+    res.status(200).json({ amount, taxRateId, vatAmount });
+  } catch (error) {
+    console.error('VAT calculation error:', error);
+    res.status(500).json({ error: 'VAT calculation failed' });
+  }
+});
+
+app.post('/tax-reports', async (req: Request, res: Response) => {
+  try {
+    const { companyId, name, startDate, endDate, dueDate } = req.body;
+    const taxReport = await taxService.createTaxReport(
+      companyId,
+      name,
+      new Date(startDate),
+      new Date(endDate),
+      dueDate ? new Date(dueDate) : undefined
+    );
+    res.status(201).json(taxReport);
+  } catch (error) {
+    console.error('Tax report creation error:', error);
+    res.status(500).json({ error: 'Tax report creation failed' });
+  }
+});
+
+app.post('/tax-reports/:id/generate', async (req: Request, res: Response) => {
+  try {
+    const taxReportId = parseInt(req.params.id);
+    const taxReport = await taxService.generateTaxReportData(taxReportId);
+    res.status(200).json(taxReport);
+  } catch (error) {
+    console.error('Tax report generation error:', error);
+    res.status(500).json({ error: 'Tax report generation failed' });
+  }
+});
+
+app.get('/companies/:id/tax-reports', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const taxReports = await taxService.getTaxReportsByCompany(companyId);
+    res.status(200).json(taxReports);
+  } catch (error) {
+    console.error('Error fetching tax reports:', error);
+    res.status(500).json({ error: 'Failed to fetch tax reports' });
+  }
+});
+
+app.post('/tax-reports/:id/submit', async (req: Request, res: Response) => {
+  try {
+    const taxReportId = parseInt(req.params.id);
+    const taxReport = await taxService.submitTaxReport(taxReportId);
+    res.status(200).json(taxReport);
+  } catch (error) {
+    console.error('Tax report submission error:', error);
+    res.status(500).json({ error: 'Tax report submission failed' });
+  }
+});
+
+// AI Categorization endpoints
+app.post('/categories', async (req: Request, res: Response) => {
+  try {
+    const { name, code, type, description, parentId } = req.body;
+    const category = await aiCategorizationService.createCategory(name, code, type, description, parentId);
+    res.status(201).json(category);
+  } catch (error) {
+    console.error('Category creation error:', error);
+    res.status(500).json({ error: 'Category creation failed' });
+  }
+});
+
+app.get('/categories', async (req: Request, res: Response) => {
+  try {
+    const categories = await aiCategorizationService.getAllCategories();
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+app.post('/transactions/:id/categorize', async (req: Request, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.id);
+    const transactionCategory = await aiCategorizationService.categorizeTransaction(transactionId);
+    res.status(200).json(transactionCategory);
+  } catch (error) {
+    console.error('Transaction categorization error:', error);
+    res.status(500).json({ error: 'Transaction categorization failed' });
+  }
+});
+
+app.post('/transactions/:id/categorize-manual', async (req: Request, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.id);
+    const { categoryId, userId } = req.body;
+    
+    if (!categoryId || !userId) {
+      return res.status(400).json({ error: 'categoryId and userId are required' });
+    }
+    
+    const transactionCategory = await aiCategorizationService.manuallyCategorizeTransaction(
+      transactionId,
+      categoryId,
+      userId
+    );
+    res.status(200).json(transactionCategory);
+  } catch (error) {
+    console.error('Manual transaction categorization error:', error);
+    res.status(500).json({ error: 'Manual transaction categorization failed' });
+  }
+});
+
+app.get('/transactions/:id/categories', async (req: Request, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.id);
+    const categories = await aiCategorizationService.getTransactionCategories(transactionId);
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error('Error fetching transaction categories:', error);
+    res.status(500).json({ error: 'Failed to fetch transaction categories' });
+  }
+});
+
+app.post('/ai/retrain', async (req: Request, res: Response) => {
+  try {
+    const result = await aiCategorizationService.retrainModel();
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Model retraining error:', error);
+    res.status(500).json({ error: 'Model retraining failed' });
+  }
+});
+
+// Invoicing and AR/AP endpoints
+app.post('/customers', async (req: Request, res: Response) => {
+  try {
+    const { name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes } = req.body;
+    const customer = await invoiceService.createCustomer(
+      name,
+      organizationNumber,
+      vatNumber,
+      contactPerson,
+      email,
+      phone,
+      address,
+      postalCode,
+      city,
+      country,
+      notes
+    );
+    res.status(201).json(customer);
+  } catch (error) {
+    console.error('Customer creation error:', error);
+    res.status(500).json({ error: 'Customer creation failed' });
+  }
+});
+
+app.get('/customers', async (req: Request, res: Response) => {
+  try {
+    const customers = await invoiceService.getAllCustomers();
+    res.status(200).json(customers);
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    res.status(500).json({ error: 'Failed to fetch customers' });
+  }
+});
+
+app.post('/invoices', async (req: Request, res: Response) => {
+  try {
+    const { companyId, customerId, invoiceNumber, invoiceDate, dueDate, reference, notes, isEInvoice } = req.body;
+    const invoice = await invoiceService.createInvoice(
+      companyId,
+      customerId,
+      invoiceNumber,
+      new Date(invoiceDate),
+      new Date(dueDate),
+      reference,
+      notes,
+      isEInvoice
+    );
+    res.status(201).json(invoice);
+  } catch (error) {
+    console.error('Invoice creation error:', error);
+    res.status(500).json({ error: 'Invoice creation failed' });
+  }
+});
+
+app.get('/companies/:id/invoices', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const invoices = await invoiceService.getInvoicesByCompany(companyId);
+    res.status(200).json(invoices);
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    res.status(500).json({ error: 'Failed to fetch invoices' });
+  }
+});
+
+app.post('/invoices/:id/items', async (req: Request, res: Response) => {
+  try {
+    const invoiceId = parseInt(req.params.id);
+    const { description, quantity, unitPrice, taxRate, accountId } = req.body;
+    const invoiceItem = await invoiceService.addInvoiceItem(
+      invoiceId,
+      description,
+      quantity,
+      unitPrice,
+      taxRate,
+      accountId
+    );
+    res.status(201).json(invoiceItem);
+  } catch (error) {
+    console.error('Invoice item creation error:', error);
+    res.status(500).json({ error: 'Invoice item creation failed' });
+  }
+});
+
+app.post('/invoices/:id/status', async (req: Request, res: Response) => {
+  try {
+    const invoiceId = parseInt(req.params.id);
+    const { status } = req.body;
+    const invoice = await invoiceService.updateInvoiceStatus(invoiceId, status);
+    res.status(200).json(invoice);
+  } catch (error) {
+    console.error('Invoice status update error:', error);
+    res.status(500).json({ error: 'Invoice status update failed' });
+  }
+});
+
+app.post('/vendors', async (req: Request, res: Response) => {
+  try {
+    const { name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes } = req.body;
+    const vendor = await billService.createVendor(
+      name,
+      organizationNumber,
+      vatNumber,
+      contactPerson,
+      email,
+      phone,
+      address,
+      postalCode,
+      city,
+      country,
+      notes
+    );
+    res.status(201).json(vendor);
+  } catch (error) {
+    console.error('Vendor creation error:', error);
+    res.status(500).json({ error: 'Vendor creation failed' });
+  }
+});
+
+app.get('/vendors', async (req: Request, res: Response) => {
+  try {
+    const vendors = await billService.getAllVendors();
+    res.status(200).json(vendors);
+  } catch (error) {
+    console.error('Error fetching vendors:', error);
+    res.status(500).json({ error: 'Failed to fetch vendors' });
+  }
+});
+
+app.post('/bills', async (req: Request, res: Response) => {
+  try {
+    const { companyId, vendorId, billNumber, billDate, dueDate, reference, notes } = req.body;
+    const bill = await billService.createBill(
+      companyId,
+      vendorId,
+      billNumber,
+      new Date(billDate),
+      new Date(dueDate),
+      reference,
+      notes
+    );
+    res.status(201).json(bill);
+  } catch (error) {
+    console.error('Bill creation error:', error);
+    res.status(500).json({ error: 'Bill creation failed' });
+  }
+});
+
+app.get('/companies/:id/bills', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const bills = await billService.getBillsByCompany(companyId);
+    res.status(200).json(bills);
+  } catch (error) {
+    console.error('Error fetching bills:', error);
+    res.status(500).json({ error: 'Failed to fetch bills' });
+  }
+});
+
+app.post('/bills/:id/items', async (req: Request, res: Response) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const { description, quantity, unitPrice, taxRate, accountId } = req.body;
+    const billItem = await billService.addBillItem(
+      billId,
+      description,
+      quantity,
+      unitPrice,
+      taxRate,
+      accountId
+    );
+    res.status(201).json(billItem);
+  } catch (error) {
+    console.error('Bill item creation error:', error);
+    res.status(500).json({ error: 'Bill item creation failed' });
+  }
+});
+
+app.post('/bills/:id/status', async (req: Request, res: Response) => {
+  try {
+    const billId = parseInt(req.params.id);
+    const { status } = req.body;
+    const bill = await billService.updateBillStatus(billId, status);
+    res.status(200).json(bill);
+  } catch (error) {
+    console.error('Bill status update error:', error);
+    res.status(500).json({ error: 'Bill status update failed' });
   }
 });
 

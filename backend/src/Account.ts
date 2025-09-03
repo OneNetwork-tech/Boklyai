@@ -1,6 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ChartOfAccounts } from './ChartOfAccounts';
 import { Transaction } from './Transaction';
+import { TaxRule } from './TaxRule';
+import { InvoiceItem } from './InvoiceItem';
+import { BillItem } from './BillItem';
 
 @Entity('accounts')
 export class Account {
@@ -44,4 +47,13 @@ export class Account {
 
   @OneToMany(() => Transaction, transaction => transaction.account)
   transactions!: Transaction[];
+
+  @OneToMany(() => TaxRule, taxRule => taxRule.account)
+  taxRules!: TaxRule[];
+
+  @OneToMany(() => InvoiceItem, invoiceItem => invoiceItem.account)
+  invoiceItems!: InvoiceItem[];
+
+  @OneToMany(() => BillItem, billItem => billItem.account)
+  billItems!: BillItem[];
 }
