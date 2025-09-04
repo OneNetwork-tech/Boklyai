@@ -1,23 +1,20 @@
-# Use Node.js 18 as base image
+# Use Node.js 18 as the base image
 FROM node:18
 
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --only=production
 
-# Copy source code
+# Copy the rest of the application code
 COPY . .
 
-# Build the application
-RUN npm run build
-
-# Expose port
+# Expose port 3000
 EXPOSE 3000
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "dist/index.js"]

@@ -8,11 +8,11 @@ export class CompanyService {
    * Create a new company
    * @param name Company name
    * @param organizationNumber Organization number
-   * @param vatNumber VAT number (optional)
-   * @param address Company address (optional)
-   * @param postalCode Postal code (optional)
-   * @param city City (optional)
-   * @param country Country (optional)
+   * @param vatNumber VAT number
+   * @param address Company address
+   * @param postalCode Postal code
+   * @param city City
+   * @param country Country
    */
   async createCompany(
     name: string,
@@ -26,11 +26,11 @@ export class CompanyService {
     const company = new Company();
     company.name = name;
     company.organizationNumber = organizationNumber;
-    company.vatNumber = vatNumber;
-    company.address = address;
-    company.postalCode = postalCode;
-    company.city = city;
-    company.country = country;
+    company.vatNumber = vatNumber || '';
+    company.address = address || '';
+    company.postalCode = postalCode || '';
+    company.city = city || '';
+    company.country = country || 'Sweden';
     company.isActive = true;
 
     return await this.companyRepository.save(company);
@@ -40,10 +40,7 @@ export class CompanyService {
    * Get all companies
    */
   async getAllCompanies(): Promise<Company[]> {
-    return await this.companyRepository.find({
-      where: { isActive: true },
-      relations: ['employees']
-    });
+    return await this.companyRepository.find({ where: { isActive: true } });
   }
 
   /**
@@ -51,24 +48,6 @@ export class CompanyService {
    * @param id Company ID
    */
   async getCompanyById(id: number): Promise<Company | null> {
-    return await this.companyRepository.findOne({
-      where: { id, isActive: true },
-      relations: ['employees']
-    });
-  }
-
-  /**
-   * Update company information
-   * @param id Company ID
-   * @param updateData Company update data
-   */
-  async updateCompany(id: number, updateData: Partial<Company>): Promise<Company | null> {
-    const company = await this.companyRepository.findOneBy({ id, isActive: true });
-    if (!company) {
-      return null;
-    }
-
-    Object.assign(company, updateData);
-    return await this.companyRepository.save(company);
+    return await this.companyRepository.findOneBy({ id, isActive: true });
   }
 }

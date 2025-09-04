@@ -14,6 +14,12 @@ export class Transaction {
 
   @Column({ type: 'decimal', precision: 15, scale: 2 })
   amount!: number;
+  
+  @Column({ nullable: true })
+  matchedBankTransactionId?: number;
+
+  @Column({ default: false })
+  isMatched!: boolean;
 
   @Column({
     type: 'enum',

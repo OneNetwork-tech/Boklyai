@@ -5,6 +5,10 @@ import { BankAccount } from './BankAccount';
 import { TaxReport } from './TaxReport';
 import { Invoice } from './Invoice';
 import { Bill } from './Bill';
+import { FinancialReport } from './FinancialReport';
+import { Dashboard } from './Dashboard';
+import { Kpi } from './Kpi';
+import { Payroll } from './Payroll';
 
 @Entity('companies')
 export class Company {
@@ -58,4 +62,16 @@ export class Company {
 
   @OneToMany(() => Bill, bill => bill.company)
   bills!: Bill[];
+
+  @OneToMany(() => FinancialReport, financialReport => financialReport.company)
+  financialReports!: FinancialReport[];
+
+  @OneToMany(() => Dashboard, dashboard => dashboard.company)
+  dashboards!: Dashboard[];
+
+  @OneToMany(() => Kpi, kpi => kpi.company)
+  kpis!: Kpi[];
+
+  @OneToMany(() => Payroll, payroll => payroll.company)
+  payrolls!: Payroll[];
 }

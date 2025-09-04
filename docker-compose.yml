@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:15
+    container_name: boklyai_db
+    environment:
+      POSTGRES_USER: boklyai
+      POSTGRES_PASSWORD: boklyai_password
+      POSTGRES_DB: boklyai_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - boklyai_network
+
+  # Backend API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: boklyai_backend
+    environment:
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=boklyai
+      - DATABASE_PASSWORD=boklyai_password
+      - DATABASE_NAME=boklyai_db
+      - JWT_SECRET=boklyai_jwt_secret
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - database
+    networks:
+      - boklyai_network
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: boklyai_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - boklyai_network
+
+volumes:
+  postgres_data:
+
+networks:
+  boklyai_network:
+    driver: bridge

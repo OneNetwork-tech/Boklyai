@@ -29,6 +29,9 @@ export class Bill {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   totalAmount!: number;
 
+  @Column({ type: 'text', nullable: true })
+  description!: string;
+
   @Column({
     type: 'enum',
     enum: ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'],

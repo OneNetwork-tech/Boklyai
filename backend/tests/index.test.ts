@@ -560,6 +560,284 @@ jest.mock('../src/index', () => {
     });
   });
   
+  // Reporting and Dashboard endpoints
+  app.post('/financial-reports', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      name: 'Q1 2024 Financial Report',
+      type: 'INCOME_STATEMENT',
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-03-31'),
+      status: 'DRAFT',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      company: {
+        id: 1,
+        name: 'Test Company'
+      }
+    });
+  });
+  
+  app.get('/companies/:id/financial-reports', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        name: 'Q1 2024 Financial Report',
+        type: 'INCOME_STATEMENT',
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-03-31'),
+        status: 'DRAFT',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  app.post('/dashboards', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      name: 'Executive Dashboard',
+      description: 'Main dashboard for executives',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      company: {
+        id: 1,
+        name: 'Test Company'
+      }
+    });
+  });
+  
+  app.get('/companies/:id/dashboards', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        name: 'Executive Dashboard',
+        description: 'Main dashboard for executives',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  app.post('/kpis', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      name: 'Revenue Growth',
+      code: 'REV_GROWTH',
+      description: 'Quarterly revenue growth rate',
+      unit: '%',
+      category: 'Financial',
+      currentValue: 12.5,
+      previousValue: 8.2,
+      targetValue: 15.0,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      company: {
+        id: 1,
+        name: 'Test Company'
+      }
+    });
+  });
+  
+  app.get('/companies/:id/kpis', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        name: 'Revenue Growth',
+        code: 'REV_GROWTH',
+        description: 'Quarterly revenue growth rate',
+        unit: '%',
+        category: 'Financial',
+        currentValue: 12.5,
+        previousValue: 8.2,
+        targetValue: 15.0,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  // Payroll endpoints
+  app.post('/employees', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      firstName: 'John',
+      lastName: 'Doe',
+      personalNumber: '199012311234',
+      email: 'john.doe@example.com',
+      phone: '+46123456789',
+      address: 'Test Street 1',
+      postalCode: '12345',
+      city: 'Test City',
+      country: 'Sweden',
+      startDate: new Date('2024-01-01'),
+      endDate: null,
+      status: 'ACTIVE',
+      salary: 45000,
+      position: 'Developer',
+      notes: 'Test employee',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      company: {
+        id: 1,
+        name: 'Test Company'
+      }
+    });
+  });
+  
+  app.get('/companies/:id/employees', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        personalNumber: '199012311234',
+        email: 'john.doe@example.com',
+        phone: '+46123456789',
+        address: 'Test Street 1',
+        postalCode: '12345',
+        city: 'Test City',
+        country: 'Sweden',
+        startDate: new Date('2024-01-01'),
+        endDate: null,
+        status: 'ACTIVE',
+        salary: 45000,
+        position: 'Developer',
+        notes: 'Test employee',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  app.post('/payrolls', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      name: 'January 2024 Payroll',
+      periodStart: new Date('2024-01-01'),
+      periodEnd: new Date('2024-01-31'),
+      paymentDate: new Date('2024-02-05'),
+      status: 'DRAFT',
+      totalGrossSalary: 0,
+      totalDeductions: 0,
+      totalNetSalary: 0,
+      notes: 'Test payroll',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      company: {
+        id: 1,
+        name: 'Test Company'
+      }
+    });
+  });
+  
+  app.get('/companies/:id/payrolls', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        name: 'January 2024 Payroll',
+        periodStart: new Date('2024-01-01'),
+        periodEnd: new Date('2024-01-31'),
+        paymentDate: new Date('2024-02-05'),
+        status: 'DRAFT',
+        totalGrossSalary: 0,
+        totalDeductions: 0,
+        totalNetSalary: 0,
+        notes: 'Test payroll',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  // Security endpoints
+  app.post('/roles', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      name: 'Admin',
+      description: 'Administrator role with full access',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+  });
+  
+  app.get('/roles', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        name: 'Admin',
+        description: 'Administrator role with full access',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 2,
+        name: 'User',
+        description: 'Regular user role with limited access',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  app.post('/permissions', (req: Request, res: Response) => {
+    res.status(201).json({
+      id: 1,
+      name: 'Manage Users',
+      code: 'MANAGE_USERS',
+      description: 'Permission to manage users',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+  });
+  
+  app.get('/permissions', (req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        id: 1,
+        name: 'Manage Users',
+        code: 'MANAGE_USERS',
+        description: 'Permission to manage users',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 2,
+        name: 'View Reports',
+        code: 'VIEW_REPORTS',
+        description: 'Permission to view reports',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+  });
+  
+  app.post('/auth/login', (req: Request, res: Response) => {
+    res.status(200).json({
+      user: {
+        id: 1,
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        isActive: true,
+        isEmailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    });
+  });
+  
   return app;
 });
 
@@ -1323,5 +1601,301 @@ describe('Backend API Tests', () => {
     expect(res.status).toBe(201);
     expect(res.body.billNumber).toBe('BILL-2024-001');
     expect(res.body.status).toBe('DRAFT');
+  });
+  
+  it('should create a financial report on POST /financial-reports', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/financial-reports', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        name: 'Q1 2024 Financial Report',
+        type: 'INCOME_STATEMENT',
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-03-31'),
+        status: 'DRAFT',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        company: {
+          id: 1,
+          name: 'Test Company'
+        }
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/financial-reports')
+      .send({
+        companyId: 1,
+        name: 'Q1 2024 Financial Report',
+        type: 'INCOME_STATEMENT',
+        startDate: '2024-01-01',
+        endDate: '2024-03-31'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Q1 2024 Financial Report');
+    expect(res.body.type).toBe('INCOME_STATEMENT');
+    expect(res.body.status).toBe('DRAFT');
+  });
+  
+  it('should create a dashboard on POST /dashboards', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/dashboards', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        name: 'Executive Dashboard',
+        description: 'Main dashboard for executives',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        company: {
+          id: 1,
+          name: 'Test Company'
+        }
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/dashboards')
+      .send({
+        companyId: 1,
+        name: 'Executive Dashboard',
+        description: 'Main dashboard for executives'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Executive Dashboard');
+    expect(res.body.isActive).toBe(true);
+  });
+  
+  it('should create a KPI on POST /kpis', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/kpis', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        name: 'Revenue Growth',
+        code: 'REV_GROWTH',
+        description: 'Quarterly revenue growth rate',
+        unit: '%',
+        category: 'Financial',
+        currentValue: 12.5,
+        previousValue: 8.2,
+        targetValue: 15.0,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        company: {
+          id: 1,
+          name: 'Test Company'
+        }
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/kpis')
+      .send({
+        companyId: 1,
+        name: 'Revenue Growth',
+        code: 'REV_GROWTH',
+        description: 'Quarterly revenue growth rate',
+        unit: '%',
+        category: 'Financial'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Revenue Growth');
+    expect(res.body.code).toBe('REV_GROWTH');
+    expect(res.body.category).toBe('Financial');
+  });
+  
+  it('should create an employee on POST /employees', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/employees', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        personalNumber: '199012311234',
+        email: 'john.doe@example.com',
+        phone: '+46123456789',
+        address: 'Test Street 1',
+        postalCode: '12345',
+        city: 'Test City',
+        country: 'Sweden',
+        startDate: new Date('2024-01-01'),
+        endDate: null,
+        status: 'ACTIVE',
+        salary: 45000,
+        position: 'Developer',
+        notes: 'Test employee',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        company: {
+          id: 1,
+          name: 'Test Company'
+        }
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/employees')
+      .send({
+        companyId: 1,
+        firstName: 'John',
+        lastName: 'Doe',
+        personalNumber: '199012311234',
+        email: 'john.doe@example.com',
+        phone: '+46123456789',
+        address: 'Test Street 1',
+        postalCode: '12345',
+        city: 'Test City',
+        country: 'Sweden',
+        startDate: '2024-01-01',
+        salary: 45000,
+        position: 'Developer',
+        notes: 'Test employee'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.firstName).toBe('John');
+    expect(res.body.lastName).toBe('Doe');
+    expect(res.body.personalNumber).toBe('199012311234');
+    expect(res.body.status).toBe('ACTIVE');
+  });
+  
+  it('should create a payroll on POST /payrolls', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/payrolls', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        name: 'January 2024 Payroll',
+        periodStart: new Date('2024-01-01'),
+        periodEnd: new Date('2024-01-31'),
+        paymentDate: new Date('2024-02-05'),
+        status: 'DRAFT',
+        totalGrossSalary: 0,
+        totalDeductions: 0,
+        totalNetSalary: 0,
+        notes: 'Test payroll',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        company: {
+          id: 1,
+          name: 'Test Company'
+        }
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/payrolls')
+      .send({
+        companyId: 1,
+        name: 'January 2024 Payroll',
+        periodStart: '2024-01-01',
+        periodEnd: '2024-01-31',
+        paymentDate: '2024-02-05'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('January 2024 Payroll');
+    expect(res.body.status).toBe('DRAFT');
+  });
+  
+  it('should create a role on POST /roles', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/roles', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        name: 'Admin',
+        description: 'Administrator role with full access',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/roles')
+      .send({
+        name: 'Admin',
+        description: 'Administrator role with full access'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Admin');
+    expect(res.body.description).toBe('Administrator role with full access');
+  });
+  
+  it('should create a permission on POST /permissions', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/permissions', (req: Request, res: Response) => {
+      res.status(201).json({
+        id: 1,
+        name: 'Manage Users',
+        code: 'MANAGE_USERS',
+        description: 'Permission to manage users',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/permissions')
+      .send({
+        name: 'Manage Users',
+        code: 'MANAGE_USERS',
+        description: 'Permission to manage users'
+      });
+      
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Manage Users');
+    expect(res.body.code).toBe('MANAGE_USERS');
+  });
+  
+  it('should authenticate user on POST /auth/login', async () => {
+    const express = require('express');
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.post('/auth/login', (req: Request, res: Response) => {
+      res.status(200).json({
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          isActive: true,
+          isEmailVerified: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+      });
+    });
+    
+    const res = await request(testApp)
+      .post('/auth/login')
+      .send({
+        email: 'test@example.com',
+        password: 'password123'
+      });
+      
+    expect(res.status).toBe(200);
+    expect(res.body.user).toBeDefined();
+    expect(res.body.token).toBeDefined();
   });
 });

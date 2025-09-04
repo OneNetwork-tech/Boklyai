@@ -9,8 +9,169 @@ export class InvoiceService {
   private invoiceRepository = AppDataSource.getRepository(Invoice);
   private invoiceItemRepository = AppDataSource.getRepository(InvoiceItem);
   private customerRepository = AppDataSource.getRepository(Customer);
-  private companyRepository = AppDataSource.getRepository(Company);
   private accountRepository = AppDataSource.getRepository(Account);
+
+  /**
+   * Create a new invoice
+   * @param companyId Company ID
+   * @param customerId Customer ID
+   * @param invoiceNumber Invoice number
+   * @param invoiceDate Invoice date
+   * @param dueDate Due date
+   * @param reference Reference
+   * @param notes Notes
+   */
+  async createInvoice(
+    companyId: number,
+    customerId: number,
+    invoiceNumber: string,
+    invoiceDate: Date,
+    dueDate: Date,
+    reference: string = '',
+    notes: string = ''
+  ): Promise<Invoice> {
+    const invoice = new Invoice();
+    
+    // Use relation objects instead of direct IDs
+    invoice.company = { id: companyId } as Company;
+    invoice.customer = { id: customerId } as Customer;
+    
+    invoice.invoiceNumber = invoiceNumber;
+    invoice.invoiceDate = invoiceDate;
+    invoice.dueDate = dueDate;
+    invoice.reference = reference;
+    invoice.notes = notes;
+    invoice.status = 'DRAFT';
+    invoice.subtotal = 0;
+    invoice.taxAmount = 0;
+    invoice.totalAmount = 0;
+
+    return await this.invoiceRepository.save(invoice);
+  }
+
+  /**
+   * Get invoices by company
+   * @param companyId Company ID
+   */
+  async getInvoicesByCompany(companyId: number): Promise<Invoice[]> {
+    return await this.invoiceRepository.find({
+      where: { company: { id: companyId } },
+      relations: ['customer', 'items'],
+      order: { invoiceDate: 'DESC' }
+    });
+  }
+
+  /**
+   * Add item to invoice
+   * @param invoiceId Invoice ID
+   * @param accountId Account ID
+   * @param description Description
+   * @param quantity Quantity
+   * @param unitPrice Unit price
+   * @param taxRate Tax rate
+   */
+  async addInvoiceItem(
+    invoiceId: number,
+    accountId: number,
+    description: string,
+    quantity: number,
+    unitPrice: number,
+    taxRate: number = 0
+  ): Promise<InvoiceItem> {
+    const invoice = await this.invoiceRepository.findOneBy({ id: invoiceId });
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    const account = await this.accountRepository.findOneBy({ id: accountId });
+    if (!account) {
+      throw new Error('Account not found');
+    }
+
+    const invoiceItem = new InvoiceItem();
+    invoiceItem.invoice = invoice;
+    invoiceItem.account = account;
+    invoiceItem.description = description;
+    invoiceItem.quantity = quantity;
+    invoiceItem.unitPrice = unitPrice;
+    invoiceItem.taxRate = taxRate;
+
+    // Calculate amounts
+    const subtotal = quantity * unitPrice;
+    const taxAmount = subtotal * (taxRate / 100);
+    const totalAmount = subtotal + taxAmount;
+
+    invoiceItem.totalAmount = totalAmount;
+    invoiceItem.taxAmount = taxAmount;
+
+    // Update invoice totals
+    invoice.subtotal += subtotal;
+    invoice.taxAmount += taxAmount;
+    invoice.totalAmount += totalAmount;
+
+    await this.invoiceRepository.save(invoice);
+    return await this.invoiceItemRepository.save(invoiceItem);
+  }
+
+  /**
+   * Update invoice status
+   * @param invoiceId Invoice ID
+   * @param status New status
+   */
+  async updateInvoiceStatus(invoiceId: number, status: string): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findOneBy({ id: invoiceId });
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    invoice.status = status as 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+    return await this.invoiceRepository.save(invoice);
+  }
+
+  /**
+   * Mark invoice as paid
+   * @param invoiceId Invoice ID
+   * @param paymentDate Payment date
+   * @param paymentMethod Payment method
+   */
+  async markInvoiceAsPaid(invoiceId: number): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findOneBy({ id: invoiceId });
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    invoice.status = 'PAID';
+
+    return await this.invoiceRepository.save(invoice);
+  }
+
+  /**
+   * Get overdue invoices
+   * @param companyId Company ID
+   */
+  async getOverdueInvoices(companyId: number): Promise<Invoice[]> {
+    const today = new Date();
+    return await this.invoiceRepository.find({
+      where: {
+        company: { id: companyId },
+        status: 'SENT',
+        dueDate: { $lt: today } as any
+      },
+      relations: ['customer']
+    });
+  }
+
+  /**
+   * Get invoices by customer
+   * @param customerId Customer ID
+   */
+  async getInvoicesByCustomer(customerId: number): Promise<Invoice[]> {
+    return await this.invoiceRepository.find({
+      where: { customer: { id: customerId } },
+      relations: ['company'],
+      order: { invoiceDate: 'DESC' }
+    });
+  }
 
   /**
    * Create a new customer
@@ -19,7 +180,7 @@ export class InvoiceService {
    * @param vatNumber VAT number
    * @param contactPerson Contact person
    * @param email Email
-   * @param phone Phone number
+   * @param phone Phone
    * @param address Address
    * @param postalCode Postal code
    * @param city City
@@ -29,22 +190,16 @@ export class InvoiceService {
   async createCustomer(
     name: string,
     organizationNumber: string,
-    vatNumber?: string,
-    contactPerson?: string,
-    email?: string,
-    phone?: string,
-    address?: string,
-    postalCode?: string,
-    city?: string,
-    country?: string,
-    notes?: string
+    vatNumber: string,
+    contactPerson: string,
+    email: string,
+    phone: string,
+    address: string,
+    postalCode: string,
+    city: string,
+    country: string,
+    notes: string
   ): Promise<Customer> {
-    // Check if customer with this organization number already exists
-    const existingCustomer = await this.customerRepository.findOneBy({ organizationNumber });
-    if (existingCustomer) {
-      throw new Error('Customer with this organization number already exists');
-    }
-
     const customer = new Customer();
     customer.name = name;
     customer.organizationNumber = organizationNumber;
@@ -66,9 +221,7 @@ export class InvoiceService {
    * Get all customers
    */
   async getAllCustomers(): Promise<Customer[]> {
-    return await this.customerRepository.find({
-      where: { isActive: true }
-    });
+    return await this.customerRepository.find({ where: { isActive: true } });
   }
 
   /**
@@ -76,197 +229,37 @@ export class InvoiceService {
    * @param id Customer ID
    */
   async getCustomerById(id: number): Promise<Customer | null> {
-    return await this.customerRepository.findOne({
-      where: { id, isActive: true }
-    });
+    return await this.customerRepository.findOneBy({ id, isActive: true });
   }
 
   /**
-   * Create a new invoice
-   * @param companyId Company ID
-   * @param customerId Customer ID
-   * @param invoiceNumber Invoice number
-   * @param invoiceDate Invoice date
-   * @param dueDate Due date
-   * @param reference Reference
-   * @param notes Notes
-   * @param isEInvoice Is e-invoice
-   */
-  async createInvoice(
-    companyId: number,
-    customerId: number,
-    invoiceNumber: string,
-    invoiceDate: Date,
-    dueDate: Date,
-    reference?: string,
-    notes?: string,
-    isEInvoice: boolean = false
-  ): Promise<Invoice> {
-    const company = await this.companyRepository.findOneBy({ id: companyId });
-    if (!company) {
-      throw new Error('Company not found');
-    }
-
-    const customer = await this.customerRepository.findOneBy({ id: customerId });
-    if (!customer) {
-      throw new Error('Customer not found');
-    }
-
-    // Check if invoice with this number already exists
-    const existingInvoice = await this.invoiceRepository.findOneBy({ invoiceNumber });
-    if (existingInvoice) {
-      throw new Error('Invoice with this number already exists');
-    }
-
-    const invoice = new Invoice();
-    invoice.company = company;
-    invoice.customer = customer;
-    invoice.invoiceNumber = invoiceNumber;
-    invoice.invoiceDate = invoiceDate;
-    invoice.dueDate = dueDate;
-    invoice.reference = reference;
-    invoice.notes = notes;
-    invoice.isEInvoice = isEInvoice;
-    invoice.status = 'DRAFT';
-    invoice.subtotal = 0;
-    invoice.taxAmount = 0;
-    invoice.totalAmount = 0;
-
-    return await this.invoiceRepository.save(invoice);
-  }
-
-  /**
-   * Get all invoices for a company
-   * @param companyId Company ID
-   */
-  async getInvoicesByCompany(companyId: number): Promise<Invoice[]> {
-    return await this.invoiceRepository.find({
-      where: {
-        company: { id: companyId }
-      },
-      relations: ['customer'],
-      order: {
-        createdAt: 'DESC'
-      }
-    });
-  }
-
-  /**
-   * Get invoice by ID
-   * @param id Invoice ID
-   */
-  async getInvoiceById(id: number): Promise<Invoice | null> {
-    return await this.invoiceRepository.findOne({
-      where: { id },
-      relations: ['customer', 'company', 'items', 'items.account']
-    });
-  }
-
-  /**
-   * Add item to invoice
-   * @param invoiceId Invoice ID
-   * @param description Item description
-   * @param quantity Quantity
-   * @param unitPrice Unit price
-   * @param taxRate Tax rate
-   * @param accountId Account ID
-   */
-  async addInvoiceItem(
-    invoiceId: number,
-    description: string,
-    quantity: number,
-    unitPrice: number,
-    taxRate: number,
-    accountId: number
-  ): Promise<InvoiceItem> {
-    const invoice = await this.invoiceRepository.findOneBy({ id: invoiceId });
-    if (!invoice) {
-      throw new Error('Invoice not found');
-    }
-
-    const account = await this.accountRepository.findOneBy({ id: accountId });
-    if (!account) {
-      throw new Error('Account not found');
-    }
-
-    const invoiceItem = new InvoiceItem();
-    invoiceItem.invoice = invoice;
-    invoiceItem.description = description;
-    invoiceItem.quantity = quantity;
-    invoiceItem.unitPrice = unitPrice;
-    invoiceItem.taxRate = taxRate;
-    invoiceItem.taxAmount = Number((quantity * unitPrice * taxRate / 100).toFixed(2));
-    invoiceItem.totalAmount = Number((quantity * unitPrice + invoiceItem.taxAmount).toFixed(2));
-
-    const savedItem = await this.invoiceItemRepository.save(invoiceItem);
-
-    // Update invoice totals
-    await this.updateInvoiceTotals(invoiceId);
-
-    return savedItem;
-  }
-
-  /**
-   * Update invoice totals
+   * Delete an invoice
    * @param invoiceId Invoice ID
    */
-  private async updateInvoiceTotals(invoiceId: number): Promise<void> {
-    const invoice = await this.invoiceRepository.findOne({
-      where: { id: invoiceId },
-      relations: ['items']
-    });
-
-    if (!invoice) {
-      throw new Error('Invoice not found');
-    }
-
-    let subtotal = 0;
-    let taxAmount = 0;
-    let totalAmount = 0;
-
-    for (const item of invoice.items) {
-      subtotal += item.quantity * item.unitPrice;
-      taxAmount += item.taxAmount;
-      totalAmount += item.totalAmount;
-    }
-
-    invoice.subtotal = Number(subtotal.toFixed(2));
-    invoice.taxAmount = Number(taxAmount.toFixed(2));
-    invoice.totalAmount = Number(totalAmount.toFixed(2));
-
-    await this.invoiceRepository.save(invoice);
+  async deleteInvoice(invoiceId: number): Promise<boolean> {
+    const result = await this.invoiceRepository.delete(invoiceId);
+    return (result.affected ?? 0) > 0;
   }
 
   /**
-   * Update invoice status
-   * @param invoiceId Invoice ID
-   * @param status New status
-   */
-  async updateInvoiceStatus(
-    invoiceId: number,
-    status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED'
-  ): Promise<Invoice> {
-    const invoice = await this.getInvoiceById(invoiceId);
-    if (!invoice) {
-      throw new Error('Invoice not found');
-    }
-
-    invoice.status = status;
-    return await this.invoiceRepository.save(invoice);
-  }
-
-  /**
-   * Get overdue invoices
+   * Get invoice statistics
    * @param companyId Company ID
    */
-  async getOverdueInvoices(companyId: number): Promise<Invoice[]> {
-    const today = new Date();
-    return await this.invoiceRepository
-      .createQueryBuilder('invoice')
-      .where('invoice.companyId = :companyId', { companyId })
-      .andWhere('invoice.dueDate < :today', { today })
-      .andWhere('invoice.status = :status', { status: 'SENT' })
-      .orderBy('invoice.dueDate', 'ASC')
-      .getMany();
+  async getInvoiceStatistics(companyId: number): Promise<{
+    total: number;
+    paid: number;
+    overdue: number;
+    draft: number;
+    totalAmount: number;
+  }> {
+    const invoices = await this.getInvoicesByCompany(companyId);
+    
+    const total = invoices.length;
+    const paid = invoices.filter(i => i.status === 'PAID').length;
+    const overdue = invoices.filter(i => i.status === 'OVERDUE').length;
+    const draft = invoices.filter(i => i.status === 'DRAFT').length;
+    const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+
+    return { total, paid, overdue, draft, totalAmount };
   }
 }

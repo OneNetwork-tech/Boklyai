@@ -20,6 +20,15 @@ import { Invoice } from './Invoice';
 import { Bill } from './Bill';
 import { InvoiceItem } from './InvoiceItem';
 import { BillItem } from './BillItem';
+import { FinancialReport } from './FinancialReport';
+import { Dashboard } from './Dashboard';
+import { Kpi } from './Kpi';
+import { Employee } from './Employee';
+import { Payroll } from './Payroll';
+import { PayrollItem } from './PayrollItem';
+import { Role } from './Role';
+import { Permission } from './Permission';
+import { AuditLog } from './AuditLog';
 
 // In production, these values should come from environment variables
 export const AppDataSource = new DataSource({
@@ -52,7 +61,16 @@ export const AppDataSource = new DataSource({
     Invoice,
     Bill,
     InvoiceItem,
-    BillItem
+    BillItem,
+    FinancialReport,
+    Dashboard,
+    Kpi,
+    Employee,
+    Payroll,
+    PayrollItem,
+    Role,
+    Permission,
+    AuditLog
   ],
   subscribers: [],
   migrations: [],

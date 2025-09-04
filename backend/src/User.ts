@@ -1,5 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, BeforeInsert, BeforeUpdate } from 'typeorm';
 import { Company } from './Company';
+import { Role } from './Role';
+import { AuditLog } from './AuditLog';
+import * as bcrypt from 'bcrypt';
 
 @Entity('users')
 export class User {
@@ -18,8 +21,29 @@ export class User {
   @Column({ nullable: true })
   lastName!: string;
 
+  @Column({ nullable: true })
+  phone!: string;
+
+  @Column({ default: true })
+  isActive!: boolean;
+
   @Column({ default: false })
-  isVerified!: boolean;
+  isEmailVerified!: boolean;
+
+  @Column({ nullable: true })
+  lastLoginAt!: Date;
+
+  @Column({ nullable: true })
+  passwordResetToken!: string;
+
+  @Column({ nullable: true })
+  passwordResetExpires!: Date;
+
+  @Column({ nullable: true })
+  twoFactorSecret!: string;
+
+  @Column({ default: false })
+  twoFactorEnabled!: boolean;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -27,13 +51,20 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  // For BankID integration, we'll add BankID-specific fields later
-  @Column({ nullable: true })
-  bankIdSessionId!: string;
-
-  @Column({ nullable: true })
-  bankIdPersonNumber!: string;
-
-  @ManyToOne(() => Company, company => company.employees, { nullable: true })
+  @ManyToOne(() => Company, company => company.employees)
   company!: Company;
+
+  @ManyToOne(() => Role, role => role.users)
+  role!: Role;
+
+  @OneToMany(() => AuditLog, auditLog => auditLog.user)
+  auditLogs!: AuditLog[];
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async hashPassword() {
+    if (this.password) {
+      this.password = await bcrypt.hash(this.password, 10);
+    }
+  }
 }

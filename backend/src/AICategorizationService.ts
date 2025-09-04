@@ -1,32 +1,173 @@
-import axios from 'axios';
 import { AppDataSource } from './database';
 import { Transaction } from './Transaction';
 import { Category } from './Category';
-import { TransactionCategory } from './TransactionCategory';
 import { CategorizationFeedback } from './CategorizationFeedback';
 import { User } from './User';
 
 export class AICategorizationService {
   private transactionRepository = AppDataSource.getRepository(Transaction);
   private categoryRepository = AppDataSource.getRepository(Category);
-  private transactionCategoryRepository = AppDataSource.getRepository(TransactionCategory);
   private categorizationFeedbackRepository = AppDataSource.getRepository(CategorizationFeedback);
-  private userRepository = AppDataSource.getRepository(User);
-  
-  private aiServiceUrl: string;
 
-  constructor(aiServiceUrl?: string) {
-    // Default to localhost:5000 for development
-    this.aiServiceUrl = aiServiceUrl || process.env.AI_SERVICE_URL || 'http://localhost:5000';
+  /**
+   
+   * @param transactionId Transaction ID
+   * @param userId User ID (for feedback tracking)
+   */
+  async categorizeTransaction(transactionId: number, userId: number): Promise<Category | null> {
+    const transaction = await this.transactionRepository.findOne({
+      where: { id: transactionId },
+      relations: ['account']
+    });
+
+    if (!transaction) {
+      throw new Error('Transaction not found');
+    }
+
+    // Mock AI categorization logic
+    // In a real implementation, this would call an AI service
+    const category = await this.predictCategory(transaction.description, transaction.amount);
+
+    if (category) {
+      // Update transaction with predicted category
+      // Note: You might want to create a TransactionCategory relationship instead
+      // For now, we'll just return the predicted category
+      return category;
+    }
+
+    return null;
+  }
+
+  /**
+   * Mock AI prediction method
+   * @param description Transaction description
+   * @param amount Transaction amount
+   */
+  private async predictCategory(description: string, amount: number): Promise<Category | null> {
+    // Simple rule-based categorization for demonstration
+    const descriptionLower = description.toLowerCase();
+
+    let categoryName = 'Other Expenses';
+    let categoryCode = 'OTHER_EXPENSES';
+    let type: 'INCOME' | 'EXPENSE' | 'TRANSFER' = 'EXPENSE';
+
+    if (descriptionLower.includes('salary') || descriptionLower.includes('payroll')) {
+      categoryName = 'Salary';
+      categoryCode = 'SALARY';
+      type = 'INCOME';
+    } else if (descriptionLower.includes('rent')) {
+      categoryName = 'Rent';
+      categoryCode = 'RENT';
+    } else if (descriptionLower.includes('utility') || descriptionLower.includes('electric') || descriptionLower.includes('water')) {
+      categoryName = 'Utilities';
+      categoryCode = 'UTILITIES';
+    } else if (descriptionLower.includes('office') || descriptionLower.includes('supply')) {
+      categoryName = 'Office Supplies';
+      categoryCode = 'OFFICE_SUPPLIES';
+    } else if (descriptionLower.includes('travel') || descriptionLower.includes('hotel') || descriptionLower.includes('flight')) {
+      categoryName = 'Travel Expenses';
+      categoryCode = 'TRAVEL_EXPENSES';
+    } else if (descriptionLower.includes('meal') || descriptionLower.includes('food') || descriptionLower.includes('restaurant')) {
+      categoryName = 'Meals & Entertainment';
+      categoryCode = 'MEALS_ENTERTAINMENT';
+    } else if (amount > 0) {
+      categoryName = 'Other Income';
+      categoryCode = 'OTHER_INCOME';
+      type = 'INCOME';
+    }
+
+    // Find or create the category
+    let category = await this.categoryRepository.findOne({
+      where: { code: categoryCode }
+    });
+
+    if (!category) {
+      category = new Category();
+      category.name = categoryName;
+      category.code = categoryCode;
+      category.description = `${categoryName} category`;
+      category.type = type;
+      category.isActive = true;
+
+      category = await this.categoryRepository.save(category);
+    }
+
+    return category;
+  }
+
+  /**
+   * Submit categorization feedback
+   * @param transactionId Transaction ID
+   * @param categoryId Category ID
+   * @param userId User ID
+   * @param isCorrect Whether the categorization was correct
+   * @param feedbackText Optional feedback text
+   */
+  async submitFeedback(
+    transactionId: number,
+    categoryId: number,
+    userId: number,
+    isCorrect: boolean,
+    feedbackText?: string
+  ): Promise<CategorizationFeedback> {
+    const feedback = new CategorizationFeedback();
+    feedback.transactionId = transactionId;
+    feedback.categoryId = categoryId;
+    feedback.userId = userId;
+    feedback.isCorrect = isCorrect;
+    feedback.feedbackText = feedbackText || '';
+
+    return await this.categorizationFeedbackRepository.save(feedback);
+  }
+
+  /**
+   * Get categorization feedback for a user
+   * @param userId User ID
+   * @param limit Number of feedback items to retrieve
+   */
+  async getUserFeedback(userId: number, limit: number = 50): Promise<CategorizationFeedback[]> {
+    return await this.categorizationFeedbackRepository.find({
+      where: { userId },
+      relations: ['transaction', 'category'],
+      order: { createdAt: 'DESC' },
+      take: limit
+    });
+  }
+
+  /**
+   * Train the AI model with feedback data
+   * @param feedbackIds Array of feedback IDs to use for training
+   */
+  async trainModel(feedbackIds: number[]): Promise<boolean> {
+    // Mock training implementation
+    // In a real implementation, this would:
+    // 1. Fetch feedback data
+    // 2. Preprocess the data
+    // 3. Train/update the AI model
+    // 4. Save the updated model
+
+    console.log(`Training model with ${feedbackIds.length} feedback items`);
+    
+    // Simulate training time
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return true;
+  }
+
+  /**
+   * Get all categories
+   */
+  async getCategories(): Promise<Category[]> {
+    return await this.categoryRepository.find({ where: { isActive: true } });
   }
 
   /**
    * Create a new category
    * @param name Category name
    * @param code Category code
-   * @param type Category type
+   * @param type Category type (INCOME, EXPENSE, TRANSFER)
    * @param description Category description
-   * @param parentId Parent category ID (optional)
+   * @param parentId Parent category ID (for hierarchical categories)
    */
   async createCategory(
     name: string,
@@ -35,195 +176,59 @@ export class AICategorizationService {
     description?: string,
     parentId?: number
   ): Promise<Category> {
+    if (!name || !code || !type) {
+      throw new Error('Name, code and type are required parameters');
+    }
+
+    // Check if category with this code already exists
+    const existingCategory = await this.categoryRepository.findOneBy({ code });
+    if (existingCategory) {
+      throw new Error(`Category with code ${code} already exists`);
+    }
+
     const category = new Category();
     category.name = name;
     category.code = code;
     category.type = type;
-    category.description = description;
-    category.parentId = parentId;
+    category.description = description || '';
+    category.parentId = parentId || 0; // Set to 0 if not provided (0 means no parent)
     category.isActive = true;
 
     return await this.categoryRepository.save(category);
   }
 
   /**
-   * Get all categories
-   */
-  async getAllCategories(): Promise<Category[]> {
-    return await this.categoryRepository.find({
-      where: { isActive: true }
-    });
-  }
-
-  /**
-   * Get category by ID
-   * @param id Category ID
-   */
-  async getCategoryById(id: number): Promise<Category | null> {
-    return await this.categoryRepository.findOne({
-      where: { id, isActive: true }
-    });
-  }
-
-  /**
-   * Categorize a transaction using AI
-   * @param transactionId Transaction ID
-   */
-  async categorizeTransaction(transactionId: number): Promise<TransactionCategory> {
-    const transaction = await this.transactionRepository.findOne({
-      where: { id: transactionId },
-      relations: ['account']
-    });
-    
-    if (!transaction) {
-      throw new Error('Transaction not found');
-    }
-
-    try {
-      // In a real implementation, this would call the AI service
-      // For now, we'll return mock data
-      console.log(`Categorizing transaction ${transactionId} with AI service at ${this.aiServiceUrl}`);
-      
-      // This is a placeholder implementation
-      // In a real implementation, you would send the transaction data to the AI service
-      // and receive the categorization results back
-      
-      // Mock categorization result
-      const mockCategories = await this.categoryRepository.find({ where: { isActive: true } });
-      if (mockCategories.length === 0) {
-        throw new Error('No categories available');
-      }
-      
-      // Select a random category for mock purposes
-      const randomCategory = mockCategories[Math.floor(Math.random() * mockCategories.length)];
-      
-      // Create transaction category record
-      const transactionCategory = new TransactionCategory();
-      transactionCategory.transaction = transaction;
-      transactionCategory.category = randomCategory;
-      transactionCategory.confidence = 0.85 + Math.random() * 0.15; // 85-100% confidence
-      transactionCategory.source = 'AI_MODEL';
-      transactionCategory.isManual = false;
-      
-      return await this.transactionCategoryRepository.save(transactionCategory);
-    } catch (error) {
-      console.error('AI categorization error:', error);
-      throw new Error('AI categorization failed');
-    }
-  }
-
-  /**
-   * Manually categorize a transaction
+   * Provide feedback for categorization
    * @param transactionId Transaction ID
    * @param categoryId Category ID
-   * @param userId User ID (for feedback tracking)
+   * @param userId User ID
+   * @param isCorrect Whether the categorization was correct
    */
-  async manuallyCategorizeTransaction(
+  async provideFeedback(
     transactionId: number,
     categoryId: number,
-    userId: number
-  ): Promise<TransactionCategory> {
-    const transaction = await this.transactionRepository.findOneBy({ id: transactionId });
-    if (!transaction) {
-      throw new Error('Transaction not found');
-    }
-
-    const category = await this.categoryRepository.findOneBy({ id: categoryId });
-    if (!category) {
-      throw new Error('Category not found');
-    }
-
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Check if there was a previous AI categorization
-    const previousCategory = await this.transactionCategoryRepository.findOne({
-      where: {
-        transaction: { id: transactionId },
-        isManual: false
-      },
-      order: {
-        createdAt: 'DESC'
-      }
-    });
-
-    // Create manual categorization
-    const transactionCategory = new TransactionCategory();
-    transactionCategory.transaction = transaction;
-    transactionCategory.category = category;
-    transactionCategory.confidence = 1.0; // 100% confidence for manual categorization
-    transactionCategory.source = 'MANUAL';
-    transactionCategory.isManual = true;
+    userId: number,
+    isCorrect: boolean
+  ): Promise<CategorizationFeedback> {
+    const feedback = new CategorizationFeedback();
+    feedback.transaction = { id: transactionId } as Transaction;
+    feedback.category = { id: categoryId } as Category;
+    feedback.user = { id: userId } as User;
+    feedback.isCorrect = isCorrect;
     
-    const savedTransactionCategory = await this.transactionCategoryRepository.save(transactionCategory);
-
-    // If there was a previous AI categorization, record feedback
-    if (previousCategory) {
-      const feedback = new CategorizationFeedback();
-      feedback.transaction = transaction;
-      feedback.previousCategory = previousCategory.category;
-      feedback.correctCategory = category;
-      feedback.user = user;
-      feedback.previousConfidence = previousCategory.confidence;
-      
-      await this.categorizationFeedbackRepository.save(feedback);
-    }
-
-    return savedTransactionCategory;
+    return await this.categorizationFeedbackRepository.save(feedback);
   }
 
   /**
-   * Get all categorizations for a transaction
-   * @param transactionId Transaction ID
+   * Get categorization accuracy statistics
    */
-  async getTransactionCategories(transactionId: number): Promise<TransactionCategory[]> {
-    return await this.transactionCategoryRepository.find({
-      where: {
-        transaction: { id: transactionId }
-      },
-      relations: ['category'],
-      order: {
-        createdAt: 'DESC'
-      }
-    });
-  }
+  async getAccuracyStats(): Promise<{ total: number; correct: number; accuracy: number }> {
+    const feedback = await this.categorizationFeedbackRepository.find();
+    
+    const total = feedback.length;
+    const correct = feedback.filter(f => f.isCorrect).length;
+    const accuracy = total > 0 ? (correct / total) * 100 : 0;
 
-  /**
-   * Get categorization feedback
-   * @param limit Number of feedback records to retrieve
-   */
-  async getCategorizationFeedback(limit: number = 100): Promise<CategorizationFeedback[]> {
-    return await this.categorizationFeedbackRepository.find({
-      take: limit,
-      order: {
-        createdAt: 'DESC'
-      },
-      relations: ['transaction', 'previousCategory', 'correctCategory', 'user']
-    });
-  }
-
-  /**
-   * Retrain the AI model with feedback data
-   */
-  async retrainModel(): Promise<{ success: boolean; message: string }> {
-    try {
-      // In a real implementation, this would call the AI service to retrain the model
-      // with the feedback data
-      console.log(`Retraining AI model with feedback data at ${this.aiServiceUrl}`);
-      
-      // Mock implementation
-      return {
-        success: true,
-        message: 'Model retraining initiated successfully'
-      };
-    } catch (error) {
-      console.error('Model retraining error:', error);
-      return {
-        success: false,
-        message: 'Model retraining failed'
-      };
-    }
+    return { total, correct, accuracy };
   }
 }
