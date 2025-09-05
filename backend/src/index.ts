@@ -1,5 +1,6 @@
 import express, { Application, Request, Response } from 'express';
 import multer from 'multer';
+import cors from 'cors';
 import { AppDataSource } from './database';
 import { User } from './User';
 import { BankIDService } from './bankid.service';
@@ -26,6 +27,9 @@ import path from 'path';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
+
+// Enable CORS for all origins (in production, you should restrict this)
+app.use(cors());
 
 // Configure file upload
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
@@ -56,6 +60,7 @@ ensureUploadDir(UPLOAD_DIR).catch(error => {
   console.error('Failed to create upload directory:', error);
 });
 
+app.use(cors());
 app.use(express.json());
 
 // Serve static files from the upload directory

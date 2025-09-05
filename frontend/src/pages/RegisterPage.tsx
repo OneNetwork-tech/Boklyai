@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 
 const RegisterPage: React.FC = () => {
@@ -11,6 +12,7 @@ const RegisterPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ const RegisterPage: React.FC = () => {
       // Redirect to login after successful registration
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError(t('registration_failed'));
       console.error('Registration error', err);
     } finally {
       setLoading(false);
@@ -35,7 +37,7 @@ const RegisterPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-md mx-auto card">
-        <h2 className="text-2xl font-bold text-center mb-6">Register for BoklyAI</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">{t('register_for_boklyai')}</h2>
         
         {error && (
           <div className="alert alert-danger mb-4">
@@ -45,16 +47,17 @@ const RegisterPage: React.FC = () => {
         
         {success && (
           <div className="alert alert-success mb-4">
-            Registration successful! Redirecting to login...
+            {t('registration_successful')}
           </div>
         )}
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="firstName">First Name</label>
+            <label htmlFor="firstName" className="form-label">{t('first_name')}</label>
             <input
-              type="text"
               id="firstName"
+              type="text"
+              className="form-input"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               required
@@ -62,10 +65,11 @@ const RegisterPage: React.FC = () => {
           </div>
           
           <div className="form-group">
-            <label htmlFor="lastName">Last Name</label>
+            <label htmlFor="lastName" className="form-label">{t('last_name')}</label>
             <input
-              type="text"
               id="lastName"
+              type="text"
+              className="form-input"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               required
@@ -73,10 +77,11 @@ const RegisterPage: React.FC = () => {
           </div>
           
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email" className="form-label">{t('email')}</label>
             <input
-              type="email"
               id="email"
+              type="email"
+              className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -84,10 +89,11 @@ const RegisterPage: React.FC = () => {
           </div>
           
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password" className="form-label">{t('password')}</label>
             <input
-              type="password"
               id="password"
+              type="password"
+              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -96,19 +102,16 @@ const RegisterPage: React.FC = () => {
           
           <button 
             type="submit" 
-            className="btn btn-primary w-full"
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
-            {loading ? 'Registering...' : 'Register'}
+            {loading ? t('registering') : t('register')}
           </button>
         </form>
         
         <div className="text-center mt-4">
-          <p>
-            Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Login here
-            </Link>
+          <p className="text-gray-600">
+            {t('already_have_account')} <Link to="/login" className="text-blue-600 hover:underline">{t('login')}</Link>
           </p>
         </div>
       </div>

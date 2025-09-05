@@ -13,6 +13,9 @@ RUN npm ci --only=production
 # Copy the rest of the application code
 COPY . .
 
+# Compile TypeScript to JavaScript
+RUN npm run build
+
 # Expose port 3000
 EXPOSE 3000
 

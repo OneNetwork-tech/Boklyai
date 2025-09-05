@@ -13,16 +13,6 @@
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  padding: 20px;
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
@@ -32,144 +22,128 @@
   }
 }
 
-/* Dashboard styles */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  padding: 20px;
+.language-switcher {
+  display: flex;
+  gap: 10px;
 }
 
-.dashboard-card {
+.language-switcher button {
+  background-color: #e5e7eb;
+  border: none;
+  color: #4b5563;
+  padding: 6px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.language-switcher button.active {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
+
+.language-switcher button:hover {
+  background-color: #d1d5db;
+}
+
+.language-switcher button.active:hover {
+  background-color: #2563eb;
+}
+
+/* Card styles */
+.card {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  padding: 20px;
-  text-align: left;
-}
-
-.dashboard-card h3 {
-  margin-top: 0;
-  color: #333;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 /* Form styles */
-.form-container {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 1rem;
 }
 
-.form-group label {
+.form-label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.form-input {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  transition: border-color 0.2s;
 }
 
-.form-group textarea {
-  min-height: 100px;
-  resize: vertical;
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+
+/* Button styles */
 .btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 16px;
+  transition: background-color 0.2s;
 }
 
 .btn-primary {
-  background-color: #007bff;
+  background-color: #3b82f6;
   color: white;
+  border: none;
 }
 
 .btn-primary:hover {
-  background-color: #0056b3;
+  background-color: #2563eb;
 }
 
 .btn-secondary {
-  background-color: #6c757d;
+  background-color: #6b7280;
   color: white;
+  border: none;
 }
 
 .btn-secondary:hover {
-  background-color: #545b62;
+  background-color: #4b5563;
 }
 
-.btn-success {
-  background-color: #28a745;
-  color: white;
-}
-
-.btn-success:hover {
-  background-color: #1e7e34;
-}
-
-/* Table styles */
-.table-container {
-  overflow-x: auto;
-}
-
-table {
+.btn-block {
   width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
-}
-
-th, td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-th {
-  background-color: #f8f9fa;
-  font-weight: bold;
-}
-
-tr:hover {
-  background-color: #f5f5f5;
 }
 
 /* Alert styles */
 .alert {
-  padding: 15px;
-  margin-bottom: 20px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-}
-
-.alert-success {
-  color: #155724;
-  background-color: #d4edda;
-  border-color: #c3e6cb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .alert-danger {
-  color: #721c24;
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
-.alert-warning {
-  color: #856404;
-  background-color: #fff3cd;
-  border-color: #ffeeba;
+.alert-success {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
 /* Navigation */
