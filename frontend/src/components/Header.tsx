@@ -40,17 +40,41 @@ const Header: React.FC = () => {
             >
               {t('expenses')}
             </Link>
-            <Link 
-              to="/reports" 
+            <Link
+              to="/reports"
               className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
             >
               {t('reports')}
             </Link>
-            <Link 
-              to="/payroll" 
+            <Link
+              to="/payroll"
               className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
             >
               {t('payroll')}
+            </Link>
+            <Link
+              to="/subscriptions"
+              className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+            >
+              {t('subscriptions')}
+            </Link>
+            <Link
+              to="/mobile"
+              className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+            >
+              {t('mobile_app')}
+            </Link>
+            <Link
+              to="/collaboration"
+              className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+            >
+              {t('collaboration')}
+            </Link>
+            <Link
+              to="/agency"
+              className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+            >
+              {t('agency_portal')}
             </Link>
           </nav>
           
@@ -119,12 +143,40 @@ const Header: React.FC = () => {
               >
                 {t('reports')}
               </Link>
-              <Link 
-                to="/payroll" 
+              <Link
+                to="/payroll"
                 className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {t('payroll')}
+              </Link>
+              <Link
+                to="/subscriptions"
+                className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {t('subscriptions')}
+              </Link>
+              <Link
+                to="/mobile"
+                className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {t('mobile_app')}
+              </Link>
+              <Link
+                to="/collaboration"
+                className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {t('collaboration')}
+              </Link>
+              <Link
+                to="/agency"
+                className="text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm transition duration-300"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {t('agency_portal')}
               </Link>
               <div className="px-3 py-2">
                 <LanguageSwitcher />

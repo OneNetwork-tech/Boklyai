@@ -17,6 +17,9 @@ import { BillService } from './BillService';
 import { ReportingService } from './ReportingService';
 import { PayrollService } from './PayrollService';
 import { SecurityService } from './SecurityService';
+import { SubscriptionService } from './SubscriptionService';
+import { AnnualReportService } from './AnnualReportService';
+import { AgencyService } from './AgencyService';
 import { Customer } from './Customer';
 import { Vendor } from './Vendor';
 import { BillItem } from './BillItem';
@@ -54,6 +57,9 @@ const billService = new BillService();
 const reportingService = new ReportingService();
 const payrollService = new PayrollService();
 const securityService = new SecurityService();
+const subscriptionService = new SubscriptionService();
+const annualReportService = new AnnualReportService();
+const agencyService = new AgencyService();
 
 // Ensure upload directory exists
 ensureUploadDir(UPLOAD_DIR).catch(error => {
@@ -168,6 +174,82 @@ app.get('/companies/:id', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching company:', error);
     res.status(500).json({ error: 'Failed to fetch company' });
+  }
+});
+
+// Agency account endpoints
+app.post('/agencies', async (req: Request, res: Response) => {
+  try {
+    const { name, organizationNumber, contactEmail, contactPhone, website } = req.body;
+    if (!name || !organizationNumber) {
+      return res.status(400).json({ error: 'Name and organizationNumber are required' });
+    }
+    const agency = await agencyService.createAgencyAccount({
+      name,
+      organizationNumber,
+      contactEmail,
+      contactPhone,
+      website
+    });
+    res.status(201).json(agency);
+  } catch (error) {
+    console.error('Agency creation error:', error);
+    res.status(500).json({ error: 'Failed to create agency account' });
+  }
+});
+
+app.get('/agencies', async (_req: Request, res: Response) => {
+  try {
+    const agencies = await agencyService.getAgencies();
+    res.status(200).json(agencies);
+  } catch (error) {
+    console.error('Error fetching agencies:', error);
+    res.status(500).json({ error: 'Failed to fetch agencies' });
+  }
+});
+
+app.get('/agencies/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const agency = await agencyService.getAgencyById(id);
+    if (!agency) {
+      return res.status(404).json({ error: 'Agency not found' });
+    }
+    res.status(200).json(agency);
+  } catch (error) {
+    console.error('Error fetching agency:', error);
+    res.status(500).json({ error: 'Failed to fetch agency' });
+  }
+});
+
+app.post('/agencies/:id/clients', async (req: Request, res: Response) => {
+  try {
+    const agencyId = parseInt(req.params.id);
+    const agencyClient = await agencyService.addClientToAgency(agencyId, req.body);
+    res.status(201).json(agencyClient);
+  } catch (error: any) {
+    console.error('Error adding agency client:', error);
+    if (error.message === 'Agency not found' || error.message === 'Referenced company not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'New client requires name and organization number') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to add agency client' });
+  }
+});
+
+app.get('/agencies/:id/clients', async (req: Request, res: Response) => {
+  try {
+    const agencyId = parseInt(req.params.id);
+    const clients = await agencyService.getAgencyClients(agencyId);
+    res.status(200).json(clients);
+  } catch (error: any) {
+    console.error('Error fetching agency clients:', error);
+    if (error.message === 'Agency not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to fetch agency clients' });
   }
 });
 
@@ -433,12 +515,28 @@ app.post('/bank-accounts/:id/import-transactions', async (req: Request, res: Res
   try {
     const bankAccountId = parseInt(req.params.id);
     const { transactions } = req.body;
-    
+
     const importedTransactions = await bankService.importBankTransactions(bankAccountId, transactions);
     res.status(201).json(importedTransactions);
   } catch (error) {
     console.error('Transaction import error:', error);
     res.status(500).json({ error: 'Transaction import failed' });
+  }
+});
+
+app.post('/bank-accounts/:id/sync', async (req: Request, res: Response) => {
+  try {
+    const bankAccountId = parseInt(req.params.id);
+    const { startDate, endDate } = req.body;
+    const synced = await bankService.synchronizeBankAccount(
+      bankAccountId,
+      startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      endDate ? new Date(endDate) : new Date()
+    );
+    res.status(201).json(synced);
+  } catch (error) {
+    console.error('Bank sync error:', error);
+    res.status(500).json({ error: 'Failed to synchronize bank account' });
   }
 });
 
@@ -1002,6 +1100,103 @@ app.get('/companies/:id/swedish-kpis', async (req: Request, res: Response) => {
   }
 });
 
+// Annual report endpoints
+app.get('/companies/:id/annual-reports', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const reports = await annualReportService.listReports(companyId);
+    res.status(200).json(reports);
+  } catch (error) {
+    console.error('Failed to list annual reports:', error);
+    res.status(500).json({ error: 'Failed to list annual reports' });
+  }
+});
+
+app.post('/companies/:id/annual-reports', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const { fiscalYear } = req.body;
+    const report = await annualReportService.generateAnnualStatements(companyId, fiscalYear);
+    res.status(201).json(report);
+  } catch (error) {
+    console.error('Failed to generate annual report:', error);
+    res.status(500).json({ error: 'Failed to generate annual report' });
+  }
+});
+
+app.post('/annual-reports/:id/submit', async (req: Request, res: Response) => {
+  try {
+    const reportId = parseInt(req.params.id);
+    const { signature } = req.body;
+    const report = await annualReportService.submitAnnualReport(reportId, signature);
+    res.status(200).json(report);
+  } catch (error) {
+    console.error('Failed to submit annual report:', error);
+    res.status(500).json({ error: 'Failed to submit annual report' });
+  }
+});
+
+// Subscription endpoints
+app.get('/subscription-plans', async (_req: Request, res: Response) => {
+  try {
+    const plans = await subscriptionService.listPlans();
+    res.status(200).json(plans);
+  } catch (error) {
+    console.error('Failed to list subscription plans:', error);
+    res.status(500).json({ error: 'Failed to list subscription plans' });
+  }
+});
+
+app.get('/companies/:id/subscription', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const subscription = await subscriptionService.getCompanySubscription(companyId);
+    res.status(200).json(subscription);
+  } catch (error) {
+    console.error('Failed to fetch subscription:', error);
+    res.status(500).json({ error: 'Failed to fetch subscription' });
+  }
+});
+
+app.post('/companies/:id/subscription', async (req: Request, res: Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const { planCode, billingCycle } = req.body;
+    const subscription = await subscriptionService.createSubscription(
+      companyId,
+      planCode,
+      billingCycle || 'MONTHLY'
+    );
+    res.status(201).json(subscription);
+  } catch (error) {
+    console.error('Failed to create subscription:', error);
+    res.status(500).json({ error: 'Failed to create subscription' });
+  }
+});
+
+app.post('/subscriptions/:id/upgrade', async (req: Request, res: Response) => {
+  try {
+    const subscriptionId = parseInt(req.params.id);
+    const { planCode } = req.body;
+    const subscription = await subscriptionService.upgradeSubscription(subscriptionId, planCode);
+    res.status(200).json(subscription);
+  } catch (error) {
+    console.error('Failed to upgrade subscription:', error);
+    res.status(500).json({ error: 'Failed to upgrade subscription' });
+  }
+});
+
+app.post('/subscriptions/:id/cancel', async (req: Request, res: Response) => {
+  try {
+    const subscriptionId = parseInt(req.params.id);
+    const subscription = await subscriptionService.cancelSubscription(subscriptionId);
+    res.status(200).json(subscription);
+  } catch (error) {
+    console.error('Failed to cancel subscription:', error);
+    res.status(500).json({ error: 'Failed to cancel subscription' });
+  }
+});
+
 // Payroll endpoints
 app.post('/employees', async (req: Request, res: Response) => {
   try {
@@ -1095,13 +1290,30 @@ app.post('/payrolls/:id/status', async (req: Request, res: Response) => {
 app.post('/payrolls/:id/items', async (req: Request, res: Response) => {
   try {
     const payrollId = parseInt(req.params.id);
-    const { employeeId, grossSalary, preTaxDeductions, postTaxDeductions } = req.body;
+    const {
+      employeeId,
+      grossSalary,
+      preTaxDeductions,
+      postTaxDeductions,
+      taxableBenefits,
+      pensionRate,
+      vacationAccrualRate,
+      municipalTaxRate,
+      employerContributionRate
+    } = req.body;
     const payrollItem = await payrollService.addEmployeeToPayroll(
       payrollId,
       employeeId,
       grossSalary,
       preTaxDeductions,
-      postTaxDeductions
+      postTaxDeductions,
+      {
+        taxableBenefits,
+        pensionRate,
+        vacationAccrualRate,
+        municipalTaxRate,
+        employerContributionRate
+      }
     );
     res.status(201).json(payrollItem);
   } catch (error) {
@@ -1118,6 +1330,17 @@ app.post('/payrolls/:id/generate', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Payroll data generation error:', error);
     res.status(500).json({ error: 'Payroll data generation failed' });
+  }
+});
+
+app.get('/payrolls/:id/agi', async (req: Request, res: Response) => {
+  try {
+    const payrollId = parseInt(req.params.id);
+    const payroll = await payrollService.generatePayrollData(payrollId);
+    res.status(200).json(payroll.payrollData?.agiRows || []);
+  } catch (error) {
+    console.error('AGI export error:', error);
+    res.status(500).json({ error: 'Failed to export employer declaration' });
   }
 });
 
@@ -1297,6 +1520,8 @@ const connectDB = async () => {
   try {
     await AppDataSource.initialize();
     console.log('Database connection established');
+    await subscriptionService.seedDefaultPlans();
+    console.log('Subscription plans seeded');
   } catch (error) {
     console.error('Database connection failed:', error);
     process.exit(1);

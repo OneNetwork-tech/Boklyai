@@ -9,6 +9,9 @@ import { FinancialReport } from './FinancialReport';
 import { Dashboard } from './Dashboard';
 import { Kpi } from './Kpi';
 import { Payroll } from './Payroll';
+import { Subscription } from './Subscription';
+import { AnnualReport } from './AnnualReport';
+import { AgencyClient } from './AgencyClient';
 
 @Entity('companies')
 export class Company {
@@ -74,4 +77,13 @@ export class Company {
 
   @OneToMany(() => Payroll, payroll => payroll.company)
   payrolls!: Payroll[];
+
+  @OneToMany(() => Subscription, subscription => subscription.company)
+  subscriptions!: Subscription[];
+
+  @OneToMany(() => AnnualReport, annualReport => annualReport.company)
+  annualReports!: AnnualReport[];
+
+  @OneToMany(() => AgencyClient, agencyClient => agencyClient.company)
+  agencyClients!: AgencyClient[];
 }

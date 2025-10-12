@@ -11,6 +11,10 @@ import InvoicesPage from './pages/InvoicesPage';
 import BillsPage from './pages/BillsPage';
 import ReportsPage from './pages/ReportsPage';
 import PayrollPage from './pages/PayrollPage';
+import SubscriptionsPage from './pages/SubscriptionsPage';
+import MobileAppPage from './pages/MobileAppPage';
+import CollaborationPage from './pages/CollaborationPage';
+import AgencyPortalPage from './pages/AgencyPortalPage';
 
 function App() {
   const { t } = useTranslation();
@@ -29,6 +33,10 @@ function App() {
             <Route path="/bills" element={<BillsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/payroll" element={<PayrollPage />} />
+            <Route path="/subscriptions" element={<SubscriptionsPage />} />
+            <Route path="/mobile" element={<MobileAppPage />} />
+            <Route path="/collaboration" element={<CollaborationPage />} />
+            <Route path="/agency" element={<AgencyPortalPage />} />
           </Routes>
         </main>
       </div>

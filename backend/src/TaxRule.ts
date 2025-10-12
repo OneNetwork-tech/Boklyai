@@ -15,6 +15,9 @@ export class TaxRule {
   @Column({ type: 'int' })
   taxRateId!: number;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  appliesTo?: string;
+
   @Column({ type: 'varchar', length: 100 })
   name!: string;
 
