@@ -55,6 +55,10 @@ const resources = {
       "reports": "Rapporter",
       "settings": "Inställningar",
       "payroll": "Lönehantering",
+      "subscriptions": "Abonnemang",
+      "mobile_app": "Mobilapp",
+      "collaboration": "Samarbete",
+      "agency_portal": "Byråportal",
       
       // Dashboard
       "financial_overview": "Finansiell översikt",
@@ -168,6 +172,10 @@ const resources = {
       "reports": "Reports",
       "settings": "Settings",
       "payroll": "Payroll",
+      "subscriptions": "Subscriptions",
+      "mobile_app": "Mobile App",
+      "collaboration": "Collaboration",
+      "agency_portal": "Agency Portal",
       
       // Dashboard
       "financial_overview": "Financial Overview",

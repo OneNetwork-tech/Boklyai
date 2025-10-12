@@ -4,12 +4,14 @@ import { BankAccount } from './BankAccount';
 import { BankTransaction } from './BankTransaction';
 import { Transaction } from './Transaction';
 import { Company } from './Company';
+import { BankIntegrationRegistry } from './bank-integrations/BankIntegrationRegistry';
 
 export class BankService {
   private bankRepository = AppDataSource.getRepository(Bank);
   private bankAccountRepository = AppDataSource.getRepository(BankAccount);
   private bankTransactionRepository = AppDataSource.getRepository(BankTransaction);
   private transactionRepository = AppDataSource.getRepository(Transaction);
+  private integrationRegistry = new BankIntegrationRegistry();
 
   /**
    * Create a new bank
@@ -40,10 +42,14 @@ export class BankService {
   /**
    * Get all banks
    */
-  async getAllBanks(): Promise<Bank[]> {
-    return await this.bankRepository.find({
+  async getAllBanks(): Promise<(Bank & { supportedConnectors: string[] })[]> {
+    const banks = await this.bankRepository.find({
       where: { isActive: true }
     });
+    return banks.map(bank => ({
+      ...bank,
+      supportedConnectors: this.integrationRegistry.listConnectors()
+    } as Bank & { supportedConnectors: string[] }));
   }
 
   /**
@@ -189,6 +195,49 @@ export class BankService {
     }
 
     return await query.getMany();
+  }
+
+  async synchronizeBankAccount(
+    bankAccountId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<BankTransaction[]> {
+    const bankAccount = await this.bankAccountRepository.findOne({
+      where: { id: bankAccountId },
+      relations: ['bank']
+    });
+
+    if (!bankAccount) {
+      throw new Error('Bank account not found');
+    }
+
+    const connector = this.integrationRegistry.getConnector(bankAccount.bank.code);
+    if (!connector) {
+      throw new Error(`No connector registered for bank ${bankAccount.bank.code}`);
+    }
+
+    const remoteTransactions = await connector.fetchTransactions({
+      accountNumber: bankAccount.accountNumber,
+      startDate,
+      endDate
+    });
+
+    const entities = remoteTransactions.map(transaction => {
+      const bankTransaction = new BankTransaction();
+      bankTransaction.bankAccount = bankAccount;
+      bankTransaction.externalId = transaction.externalId!;
+      bankTransaction.transactionDate = transaction.transactionDate!;
+      bankTransaction.amount = transaction.amount!;
+      bankTransaction.description = transaction.description || 'Automatisk synk';
+      bankTransaction.reference = transaction.reference || '';
+      bankTransaction.currency = transaction.currency || 'SEK';
+      bankTransaction.type = (transaction.type as 'CREDIT' | 'DEBIT') || 'CREDIT';
+      bankTransaction.status = 'PENDING';
+      bankTransaction.isMatched = false;
+      return bankTransaction;
+    });
+
+    return await this.bankTransactionRepository.save(entities);
   }
 
   /**

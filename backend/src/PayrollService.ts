@@ -169,7 +169,14 @@ export class PayrollService {
     employeeId: number,
     grossSalary: number,
     preTaxDeductions?: number,
-    postTaxDeductions?: number
+    postTaxDeductions?: number,
+    options?: {
+      taxableBenefits?: number;
+      pensionRate?: number;
+      vacationAccrualRate?: number;
+      municipalTaxRate?: number;
+      employerContributionRate?: number;
+    }
   ): Promise<PayrollItem> {
     const payroll = await this.payrollRepository.findOneBy({ id: payrollId });
     if (!payroll) {
@@ -191,16 +198,92 @@ export class PayrollService {
     payrollItem.preTaxDeductions = preTaxDeductions || 0;
     payrollItem.postTaxDeductions = postTaxDeductions || 0;
 
-    // Calculate net salary
-    const taxableIncome = grossSalary - (preTaxDeductions || 0);
-    const taxAmount = taxableIncome * 0.3; // Mock tax calculation
-    payrollItem.taxAmount = taxAmount;
-    payrollItem.netSalary = grossSalary - taxAmount - (preTaxDeductions || 0) - (postTaxDeductions || 0);
+    const taxableBenefits = options?.taxableBenefits ?? 0;
+    payrollItem.taxableBenefits = taxableBenefits;
 
-    // Update payroll totals
-    payroll.totalGrossSalary += grossSalary;
-    payroll.totalDeductions += (preTaxDeductions || 0) + (postTaxDeductions || 0) + taxAmount;
-    payroll.totalNetSalary += payrollItem.netSalary;
+    const taxableIncome = grossSalary - payrollItem.preTaxDeductions + taxableBenefits;
+    const municipalTaxRate = options?.municipalTaxRate ?? 0.315; // average Swedish municipal tax
+    const stateTaxThresholdMonthly = 613900 / 12; // 2023 threshold
+    const stateTaxRate = taxableIncome > stateTaxThresholdMonthly ? 0.2 : 0;
+    const taxAmount = Number(
+      (
+        taxableIncome * municipalTaxRate +
+        Math.max(taxableIncome - stateTaxThresholdMonthly, 0) * stateTaxRate
+      ).toFixed(2)
+    );
+
+    payrollItem.taxAmount = taxAmount;
+    payrollItem.taxData = {
+      municipalTaxRate,
+      stateTaxRate,
+      taxableIncome,
+      stateTaxThresholdMonthly
+    };
+
+    const employerContributionRate = options?.employerContributionRate ?? 0.3142; // Standard arbetsgivaravgift
+    const employerContribution = Number(
+      ((taxableIncome + taxableBenefits) * employerContributionRate).toFixed(2)
+    );
+    payrollItem.employerContribution = employerContribution;
+
+    const pensionRate = options?.pensionRate ?? 0.045;
+    const pensionContribution = Number((grossSalary * pensionRate).toFixed(2));
+    payrollItem.pensionContribution = pensionContribution;
+
+    const vacationRate = options?.vacationAccrualRate ?? 0.12;
+    const vacationPayAccrual = Number((grossSalary * vacationRate).toFixed(2));
+    payrollItem.vacationPayAccrual = vacationPayAccrual;
+
+    payrollItem.netSalary = Number(
+      (
+        grossSalary -
+        taxAmount -
+        payrollItem.preTaxDeductions -
+        (postTaxDeductions || 0)
+      ).toFixed(2)
+    );
+
+    payrollItem.deductionData = {
+      preTaxDeductions: payrollItem.preTaxDeductions,
+      postTaxDeductions: payrollItem.postTaxDeductions
+    };
+
+    payrollItem.employerDeclarationRows = {
+      type: 'AGI',
+      specificationCode: '011',
+      grossSalary,
+      taxableBenefits,
+      employerContribution,
+      period: `${payroll.periodStart.toISOString().slice(0, 7)}`
+    };
+
+    // Update payroll totals including employer costs
+    payroll.totalGrossSalary = Number((payroll.totalGrossSalary + grossSalary).toFixed(2));
+    payroll.totalDeductions = Number(
+      (
+        payroll.totalDeductions +
+        payrollItem.preTaxDeductions +
+        (postTaxDeductions || 0) +
+        taxAmount +
+        employerContribution +
+        pensionContribution +
+        vacationPayAccrual
+      ).toFixed(2)
+    );
+    payroll.totalNetSalary = Number((payroll.totalNetSalary + payrollItem.netSalary).toFixed(2));
+
+    payroll.payrollData = {
+      ...(payroll.payrollData || {}),
+      employerContributions: Number(
+        (Number(payroll.payrollData?.employerContributions || 0) + employerContribution).toFixed(2)
+      ),
+      pensionContributions: Number(
+        (Number(payroll.payrollData?.pensionContributions || 0) + pensionContribution).toFixed(2)
+      ),
+      vacationAccruals: Number(
+        (Number(payroll.payrollData?.vacationAccruals || 0) + vacationPayAccrual).toFixed(2)
+      )
+    };
 
     await this.payrollRepository.save(payroll);
     return await this.payrollItemRepository.save(payrollItem);
@@ -216,9 +299,32 @@ export class PayrollService {
       throw new Error('Payroll not found');
     }
 
-    // Update the status to PROCESSED
-    payroll.status = 'PROCESSED';
+    const payrollWithItems = await this.payrollRepository.findOne({
+      where: { id: payrollId },
+      relations: ['items', 'items.employee']
+    });
 
-    return await this.payrollRepository.save(payroll);
+    if (!payrollWithItems) {
+      throw new Error('Payroll not found');
+    }
+
+    const agiRows = payrollWithItems.items.map(item => ({
+      employeeId: item.employee.id,
+      personalNumber: item.employee.personalNumber,
+      specificationCode: item.employerDeclarationRows?.specificationCode || '011',
+      grossSalary: item.grossSalary,
+      benefits: item.taxableBenefits,
+      employerContribution: item.employerContribution,
+      taxAmount: item.taxAmount
+    }));
+
+    payrollWithItems.payrollData = {
+      ...(payrollWithItems.payrollData || {}),
+      agiRows,
+      exportedAt: new Date().toISOString()
+    };
+    payrollWithItems.status = 'PROCESSED';
+
+    return await this.payrollRepository.save(payrollWithItems);
   }
 }

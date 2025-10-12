@@ -25,11 +25,26 @@ export class PayrollItem {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   taxAmount!: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  employerContribution!: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  pensionContribution!: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  vacationPayAccrual!: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  taxableBenefits!: number;
+
   @Column({ type: 'jsonb', nullable: true })
   taxData!: any;
 
   @Column({ type: 'jsonb', nullable: true })
   deductionData!: any;
+
+  @Column({ type: 'jsonb', nullable: true })
+  employerDeclarationRows!: any;
 
   @CreateDateColumn()
   createdAt!: Date;

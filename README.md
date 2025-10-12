@@ -58,6 +58,16 @@ BoklyAI is an AI-powered accounting and business management system designed spec
 
 To deploy the application, follow the instructions in [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Repository maintenance
+
+Use the consolidated update script to refresh dependencies, rebuild all services, and execute the automated test suites before pushing changes to GitHub:
+
+```bash
+./scripts/update_all.sh
+```
+
+For a step-by-step walkthrough that covers environment prerequisites and the full workflow for committing and pushing updates, read [docs/update_and_repository_sync.md](docs/update_and_repository_sync.md).
+
 ## Getting Started
 
 ### Backend

@@ -29,6 +29,11 @@ import { PayrollItem } from './PayrollItem';
 import { Role } from './Role';
 import { Permission } from './Permission';
 import { AuditLog } from './AuditLog';
+import { AnnualReport } from './AnnualReport';
+import { SubscriptionPlan } from './SubscriptionPlan';
+import { Subscription } from './Subscription';
+import { AgencyAccount } from './AgencyAccount';
+import { AgencyClient } from './AgencyClient';
 
 // In production, these values should come from environment variables
 export const AppDataSource = new DataSource({
@@ -70,7 +75,12 @@ export const AppDataSource = new DataSource({
     PayrollItem,
     Role,
     Permission,
-    AuditLog
+    AuditLog,
+    AnnualReport,
+    SubscriptionPlan,
+    Subscription,
+    AgencyAccount,
+    AgencyClient
   ],
   subscribers: [],
   migrations: [],
