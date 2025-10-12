@@ -1,5 +1,6 @@
 import { Invoice } from './Invoice';
 import { InvoiceItem } from './InvoiceItem';
+import { Customer } from './Customer';
 export declare class InvoiceService {
     private invoiceRepository;
     private invoiceItemRepository;
@@ -43,7 +44,7 @@ export declare class InvoiceService {
      * @param paymentDate Payment date
      * @param paymentMethod Payment method
      */
-    markInvoiceAsPaid(invoiceId: number, paymentDate: Date, paymentMethod: string): Promise<Invoice>;
+    markInvoiceAsPaid(invoiceId: number): Promise<Invoice>;
     /**
      * Get overdue invoices
      * @param companyId Company ID
@@ -54,6 +55,30 @@ export declare class InvoiceService {
      * @param customerId Customer ID
      */
     getInvoicesByCustomer(customerId: number): Promise<Invoice[]>;
+    /**
+     * Create a new customer
+     * @param name Customer name
+     * @param organizationNumber Organization number
+     * @param vatNumber VAT number
+     * @param contactPerson Contact person
+     * @param email Email
+     * @param phone Phone
+     * @param address Address
+     * @param postalCode Postal code
+     * @param city City
+     * @param country Country
+     * @param notes Notes
+     */
+    createCustomer(name: string, organizationNumber: string, vatNumber: string, contactPerson: string, email: string, phone: string, address: string, postalCode: string, city: string, country: string, notes: string): Promise<Customer>;
+    /**
+     * Get all customers
+     */
+    getAllCustomers(): Promise<Customer[]>;
+    /**
+     * Get customer by ID
+     * @param id Customer ID
+     */
+    getCustomerById(id: number): Promise<Customer | null>;
     /**
      * Delete an invoice
      * @param invoiceId Invoice ID

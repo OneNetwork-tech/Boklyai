@@ -1,3 +1,5 @@
+// backend/src/index.ts
+
 import express, { Application, Request, Response } from 'express';
 import multer from 'multer';
 import cors from 'cors';
@@ -20,13 +22,18 @@ import { SecurityService } from './SecurityService';
 import { Customer } from './Customer';
 import { Vendor } from './Vendor';
 import { BillItem } from './BillItem';
+import { BankIDController } from './controllers/BankIDController';
 import { Account } from './Account';
 import { Company } from './Company';
 import { generateUniqueFilename, ensureUploadDir, saveFileBuffer, getFileBuffer } from './fileUtils';
 import path from 'path';
+import { AuthService } from './services/AuthService';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize controller
+const bankIDController = new BankIDController();
 
 // Enable CORS for all origins (in production, you should restrict this)
 app.use(cors());
@@ -54,6 +61,7 @@ const billService = new BillService();
 const reportingService = new ReportingService();
 const payrollService = new PayrollService();
 const securityService = new SecurityService();
+const authService = new AuthService();
 
 // Ensure upload directory exists
 ensureUploadDir(UPLOAD_DIR).catch(error => {
@@ -82,7 +90,7 @@ app.post('/auth/initiate', async (req: Request, res: Response) => {
     const { personalNumber, endUserIp } = req.body;
     
     // In a real implementation, we would validate the IP address
-    const result = await bankIDService.authenticate(personalNumber, endUserIp);
+    const result = await bankIDService.authenticate({ personalNumber, endUserIp });
     
     res.status(200).json(result);
   } catch (error) {
@@ -108,6 +116,12 @@ app.post('/auth/collect', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Authentication collection failed' });
   }
 });
+
+// BankID authentication endpoints
+app.post('/auth/initiate', (req: Request, res: Response) => bankIDController.initiateAuth(req, res));
+app.post('/auth/collect', (req: Request, res: Response) => bankIDController.collectAuth(req, res));
+app.post('/auth/cancel', (req: Request, res: Response) => bankIDController.cancelAuth(req, res));
+app.post('/auth/qrcode', (req: Request, res: Response) => bankIDController.getQRCode(req, res));
 
 // BankID authentication cancellation endpoint
 app.post('/auth/cancel', async (req: Request, res: Response) => {
@@ -1188,6 +1202,8 @@ app.post('/users/:id/role', async (req: Request, res: Response) => {
   }
 });
 
+// Login endpoint
+
 app.post('/auth/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -1251,38 +1267,39 @@ app.post('/auth/reset-password/confirm', async (req: Request, res: Response) => 
   }
 });
 
-// Simple user registration endpoint (will be expanded with BankID in later phases)
+// Simple user registration endpoint
 app.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, phone } = req.body;
     
     // Basic validation
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-    
-    // Check if user already exists
-    const userRepository = AppDataSource.getRepository(User);
-    const existingUser = await userRepository.findOne({ where: { email } });
-    
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
+
+    // Register user
+    const result = await authService.register(email, password, firstName, lastName, phone);
     
-    // Create new user
-    const user = new User();
-    user.email = email;
-    user.password = password; // In production, this should be hashed
-    user.firstName = firstName;
-    user.lastName = lastName;
-    
-    await userRepository.save(user);
-    
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user;
-    res.status(201).json(userWithoutPassword);
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        user: result.user,
+        token: result.token,
+        expiresIn: result.expiresIn
+      }
+    });
   } catch (error) {
     console.error('Registration error:', error);
+    
+    if (error instanceof Error && error.message === 'User already exists with this email') {
+      return res.status(409).json({ error: error.message });
+    }
+    
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1302,3 +1319,17 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
+
+// Start the server only after database connection
+AppDataSource.initialize()
+  .then(() => {
+    console.log("✅ Database connected successfully");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("❌ Error during Data Source initialization:", error);
+  });
+app.use(express.json());

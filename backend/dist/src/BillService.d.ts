@@ -1,4 +1,5 @@
 import { Bill } from './Bill';
+import { Vendor } from './Vendor';
 export declare class BillService {
     private billRepository;
     private vendorRepository;
@@ -59,5 +60,30 @@ export declare class BillService {
         draft: number;
         totalAmount: number;
     }>;
+    /**
+     * Create a new vendor
+     * @param companyId Company ID
+     * @param name Vendor name
+     * @param organizationNumber Organization number
+     * @param vatNumber VAT number
+     * @param contactPerson Contact person
+     * @param email Email
+     * @param phone Phone
+     * @param address Address
+     * @param postalCode Postal code
+     * @param city City
+     * @param country Country
+     * @param notes Notes
+     */
+    createVendor(companyId: number, name: string, organizationNumber: string, vatNumber: string, contactPerson: string, email: string, phone: string, address: string, postalCode: string, city: string, country: string, notes: string): Promise<Vendor>;
+    /**
+     * Get all vendors
+     */
+    getAllVendors(): Promise<Vendor[]>;
+    /**
+     * Get vendor by ID
+     * @param id Vendor ID
+     */
+    getVendorById(id: number): Promise<Vendor | null>;
 }
 //# sourceMappingURL=BillService.d.ts.map

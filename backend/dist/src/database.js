@@ -35,7 +35,7 @@ const AuditLog_1 = require("./AuditLog");
 // In production, these values should come from environment variables
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
-    host: process.env.DB_HOST || 'localhost',
+    host: process.env.DB_HOST || 'postgres',
     port: parseInt(process.env.DB_PORT || '5432'),
     username: process.env.DB_USERNAME || 'boklyai',
     password: process.env.DB_PASSWORD || 'boklyai_password',
@@ -75,6 +75,8 @@ exports.AppDataSource = new typeorm_1.DataSource({
         AuditLog_1.AuditLog
     ],
     subscribers: [],
-    migrations: [],
+    // Add migration configuration to datasource
+    migrations: ['src/migrations/*.ts'],
+    migrationsTableName: 'migrations',
 });
 //# sourceMappingURL=database.js.map

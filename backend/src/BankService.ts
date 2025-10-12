@@ -10,6 +10,7 @@ export class BankService {
   private bankAccountRepository = AppDataSource.getRepository(BankAccount);
   private bankTransactionRepository = AppDataSource.getRepository(BankTransaction);
   private transactionRepository = AppDataSource.getRepository(Transaction);
+  private companyRepository = AppDataSource.getRepository(Company);
 
   /**
    * Create a new bank
@@ -76,7 +77,11 @@ export class BankService {
     const bankAccount = new BankAccount();
     
     // Use relation objects instead of direct IDs
-    bankAccount.company = { id: companyId } as Company;
+    const company = await this.companyRepository.findOneBy({ id: companyId });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    bankAccount.company = company;
     bankAccount.bank = { id: bankId } as Bank;
     
     bankAccount.accountName = accountName;

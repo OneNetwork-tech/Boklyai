@@ -12,6 +12,37 @@ export class SecurityService {
   private roleRepository = AppDataSource.getRepository(Role);
   private permissionRepository = AppDataSource.getRepository(Permission);
   private auditLogRepository = AppDataSource.getRepository(AuditLog);
+  private jwtSecret: string = process.env.JWT_SECRET || 'boklyai_secret_key';
+  private tokenExpiry: string = '24h';
+
+  private getJwtSecret(): string {
+    return this.jwtSecret;
+  }
+
+  private getTokenExpiry(): string {
+    return this.tokenExpiry;
+  }
+
+  /**
+   * Parse JWT expiry string to milliseconds
+   * @param expiry Expiry string like '1h', '30m', '1d'
+   * @returns Number of milliseconds
+   */
+  private parseJwtExpiry(expiry: string): number {
+    const unit = expiry.slice(-1);
+    const value = parseInt(expiry.slice(0, -1));
+    
+    switch (unit) {
+      case 'h':
+        return value * 60 * 60 * 1000;
+      case 'm':
+        return value * 60 * 1000;
+      case 'd':
+        return value * 24 * 60 * 60 * 1000;
+      default:
+        throw new Error(`Unsupported expiry unit: ${unit}`);
+    }
+  }
 
   /**
    * Create a new role
@@ -188,11 +219,17 @@ export class SecurityService {
         companyId: user.company?.id,
         roleId: user.role?.id
       },
-      process.env.JWT_SECRET || 'boklyai_secret_key',
-      { expiresIn: '24h' }
+      this.getJwtSecret(),
+      { expiresIn: this.getTokenExpiry() } as jwt.SignOptions
     );
 
-    return { user, token };
+    // Create a new user object without the password
+    const userWithoutPassword: Partial<User> = { ...user };
+    delete (userWithoutPassword as any).password;
+    delete (userWithoutPassword as any).hashPassword;
+    delete (userWithoutPassword as any).validatePassword;
+
+    return { user: userWithoutPassword as User, token };
   }
 
   /**
@@ -269,12 +306,14 @@ export class SecurityService {
 
     const resetToken = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'boklyai_secret_key',
-      { expiresIn: '1h' }
+      this.getJwtSecret(),
+      { expiresIn: this.getTokenExpiry() } as jwt.SignOptions
     );
 
     user.passwordResetToken = await bcrypt.hash(resetToken, 10);
-    user.passwordResetExpires = new Date(Date.now() + 3600000); // 1 hour from now
+    // Set password reset expiration based on tokenExpiry (convert to milliseconds)
+    const expiryDuration = this.parseJwtExpiry(this.getTokenExpiry());
+    user.passwordResetExpires = new Date(Date.now() + expiryDuration);
 
     await this.userRepository.save(user);
     return resetToken;
@@ -288,7 +327,7 @@ export class SecurityService {
   async resetUserPassword(token: string, newPassword: string): Promise<boolean> {
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'boklyai_secret_key') as any;
+      decoded = jwt.verify(token, this.getJwtSecret()) as any;
     } catch (error) {
       return false;
     }

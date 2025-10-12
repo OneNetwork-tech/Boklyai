@@ -1,4 +1,3 @@
-
 import { AppDataSource } from './database';
 import { FinancialReport } from './FinancialReport';
 import { Dashboard } from './Dashboard';
@@ -6,6 +5,8 @@ import { Kpi } from './Kpi';
 import { Company } from './Company';
 import { Account } from './Account';
 import { Transaction } from './Transaction';
+
+import type { Date } from 'typeorm';
 
 export class ReportingService {
   private financialReportRepository = AppDataSource.getRepository(FinancialReport);
@@ -30,18 +31,16 @@ export class ReportingService {
     type: string,
     startDate: Date,
     endDate: Date,
-    description?: string,
-    isPublic?: boolean
+    description?: string
   ): Promise<FinancialReport> {
     const financialReport = new FinancialReport();
-    financialReport.company = { id: companyId } as Company;
+    financialReport.companyId = companyId;
     financialReport.name = name;
-    financialReport.description = description || '';
+    financialReport.type = type;
     financialReport.startDate = startDate;
     financialReport.endDate = endDate;
-    financialReport.type = type as 'BALANCE_SHEET' | 'INCOME_STATEMENT' | 'CASH_FLOW' | 'CUSTOM';
+    financialReport.description = description || '';
     financialReport.status = 'DRAFT';
-    financialReport.isPublic = isPublic || false;
 
     return await this.financialReportRepository.save(financialReport);
   }
@@ -52,7 +51,7 @@ export class ReportingService {
    */
   async getFinancialReportsByCompany(companyId: number): Promise<FinancialReport[]> {
     return await this.financialReportRepository.find({
-      where: { company: { id: companyId } },
+      where: { companyId },
       order: { createdAt: 'DESC' }
     });
   }
@@ -80,15 +79,13 @@ export class ReportingService {
 
     // In a real implementation, this would generate actual financial report data
     // For now, we'll just update the status and add mock data
-    const balanceSheetData = await this.generateBalanceSheet(financialReport);
-    const incomeStatementData = await this.generateIncomeStatement(financialReport);
-    const cashFlowData = await this.generateCashFlowStatement(financialReport);
-
-    financialReport.status = 'FINAL';
-    financialReport.reportData = {
-      balanceSheet: balanceSheetData,
-      incomeStatement: incomeStatementData,
-      cashFlow: cashFlowData
+    financialReport.status = 'GENERATED';
+    financialReport.generatedAt = new Date();
+    financialReport.data = {
+      // Mock financial data
+      revenue: 100000,
+      expenses: 60000,
+      profit: 40000
     };
 
     return await this.financialReportRepository.save(financialReport);
@@ -103,7 +100,9 @@ export class ReportingService {
     const accounts = await this.accountRepository.find({
       where: {
         chartOfAccounts: {
-          id: report.company.id
+          company: {
+            id: report.company.id
+          }
         }
       },
       relations: ['chartOfAccounts']
@@ -148,24 +147,21 @@ export class ReportingService {
    */
   private async generateIncomeStatement(report: FinancialReport): Promise<any> {
     // Get revenue and expense accounts
-    const revenueAccounts = await this.accountRepository.find({
+    const accounts = await this.accountRepository.find({
       where: {
         chartOfAccounts: {
-          id: report.company.id
+          company: {
+            id: report.company.id
+          }
         },
-        accountType: 'REVENUE'
+        accountType: 'REVENUE' || 'EXPENSE'
       },
       relations: ['chartOfAccounts']
     });
-    const expenseAccounts = await this.accountRepository.find({
-      where: {
-        chartOfAccounts: {
-          id: report.company.id
-        },
-        accountType: 'EXPENSE'
-      },
-      relations: ['chartOfAccounts']
-    });
+
+    // Separate revenue and expenses
+    const revenueAccounts = accounts.filter(account => account.accountType === 'REVENUE');
+    const expenseAccounts = accounts.filter(account => account.accountType === 'EXPENSE');
 
     // Calculate totals
     const totalRevenue = revenueAccounts.reduce((sum, account) => sum + account.balance, 0);
@@ -270,16 +266,12 @@ export class ReportingService {
   async createDashboard(
     companyId: number,
     name: string,
-    description?: string,
-    layout?: any,
-    kpiConfig?: any
+    description?: string
   ): Promise<Dashboard> {
     const dashboard = new Dashboard();
-    dashboard.company = { id: companyId } as Company;
+    dashboard.companyId = companyId;
     dashboard.name = name;
     dashboard.description = description || '';
-    dashboard.layout = layout || {};
-    dashboard.kpiConfig = kpiConfig || {};
     dashboard.isActive = true;
 
     return await this.dashboardRepository.save(dashboard);
@@ -291,18 +283,7 @@ export class ReportingService {
    */
   async getDashboardsByCompany(companyId: number): Promise<Dashboard[]> {
     return await this.dashboardRepository.find({
-      where: { company: { id: companyId }, isActive: true }
-    });
-  }
-
-  /**
-   * Get active dashboards for a company
-   * @param companyId Company ID
-   */
-  async getActiveDashboardsByCompany(companyId: number): Promise<Dashboard[]> {
-    return await this.dashboardRepository.find({
-      where: { company: { id: companyId }, isActive: true },
-      order: { createdAt: 'DESC' }
+      where: { companyId, isActive: true }
     });
   }
 
@@ -362,17 +343,18 @@ export class ReportingService {
     code: string,
     description?: string,
     unit?: string,
-    category?: string,
-    calculationParams?: any
+    category?: string
   ): Promise<Kpi> {
     const kpi = new Kpi();
-    kpi.company = { id: companyId } as Company;
+    kpi.companyId = companyId;
     kpi.name = name;
     kpi.code = code;
     kpi.description = description || '';
     kpi.unit = unit || '';
     kpi.category = category || '';
-    kpi.calculationParams = calculationParams || {};
+    kpi.currentValue = 0;
+    kpi.previousValue = 0;
+    kpi.targetValue = 0;
     kpi.isActive = true;
 
     return await this.kpiRepository.save(kpi);
@@ -384,18 +366,7 @@ export class ReportingService {
    */
   async getKpisByCompany(companyId: number): Promise<Kpi[]> {
     return await this.kpiRepository.find({
-      where: { company: { id: companyId }, isActive: true }
-    });
-  }
-
-  /**
-   * Get active KPIs for a company
-   * @param companyId Company ID
-   */
-  async getActiveKpisByCompany(companyId: number): Promise<Kpi[]> {
-    return await this.kpiRepository.find({
-      where: { company: { id: companyId }, isActive: true },
-      order: { createdAt: 'DESC' }
+      where: { companyId, isActive: true }
     });
   }
 

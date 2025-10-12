@@ -21,5 +21,6 @@ export declare class User {
     role: Role;
     auditLogs: AuditLog[];
     hashPassword(): Promise<void>;
+    validatePassword(password: string): Promise<boolean>;
 }
 //# sourceMappingURL=User.d.ts.map

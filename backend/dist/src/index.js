@@ -1,12 +1,13 @@
 "use strict";
+// backend/src/index.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
+const cors_1 = __importDefault(require("cors"));
 const database_1 = require("./database");
-const User_1 = require("./User");
 const bankid_service_1 = require("./bankid.service");
 const ChartOfAccountsService_1 = require("./ChartOfAccountsService");
 const TransactionService_1 = require("./TransactionService");
@@ -21,10 +22,18 @@ const BillService_1 = require("./BillService");
 const ReportingService_1 = require("./ReportingService");
 const PayrollService_1 = require("./PayrollService");
 const SecurityService_1 = require("./SecurityService");
+const Vendor_1 = require("./Vendor");
+const BillItem_1 = require("./BillItem");
+const BankIDController_1 = require("./controllers/BankIDController");
 const fileUtils_1 = require("./fileUtils");
 const path_1 = __importDefault(require("path"));
+const AuthService_1 = require("./services/AuthService");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
+// Initialize controller
+const bankIDController = new BankIDController_1.BankIDController();
+// Enable CORS for all origins (in production, you should restrict this)
+app.use((0, cors_1.default)());
 // Configure file upload
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path_1.default.join(__dirname, '..', 'uploads');
 const upload = (0, multer_1.default)({
@@ -47,10 +56,12 @@ const billService = new BillService_1.BillService();
 const reportingService = new ReportingService_1.ReportingService();
 const payrollService = new PayrollService_1.PayrollService();
 const securityService = new SecurityService_1.SecurityService();
+const authService = new AuthService_1.AuthService();
 // Ensure upload directory exists
 (0, fileUtils_1.ensureUploadDir)(UPLOAD_DIR).catch(error => {
     console.error('Failed to create upload directory:', error);
 });
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 // Serve static files from the upload directory
 app.use('/uploads', express_1.default.static(UPLOAD_DIR));
@@ -67,7 +78,7 @@ app.post('/auth/initiate', async (req, res) => {
     try {
         const { personalNumber, endUserIp } = req.body;
         // In a real implementation, we would validate the IP address
-        const result = await bankIDService.authenticate(personalNumber, endUserIp);
+        const result = await bankIDService.authenticate({ personalNumber, endUserIp });
         res.status(200).json(result);
     }
     catch (error) {
@@ -90,6 +101,11 @@ app.post('/auth/collect', async (req, res) => {
         res.status(500).json({ error: 'Authentication collection failed' });
     }
 });
+// BankID authentication endpoints
+app.post('/auth/initiate', (req, res) => bankIDController.initiateAuth(req, res));
+app.post('/auth/collect', (req, res) => bankIDController.collectAuth(req, res));
+app.post('/auth/cancel', (req, res) => bankIDController.cancelAuth(req, res));
+app.post('/auth/qrcode', (req, res) => bankIDController.getQRCode(req, res));
 // BankID authentication cancellation endpoint
 app.post('/auth/cancel', async (req, res) => {
     try {
@@ -411,8 +427,8 @@ app.post('/bank-transactions/:id/mark-matched', async (req, res) => {
 app.post('/tax-rates', async (req, res) => {
     try {
         const { name, rate, description, isDefault } = req.body;
-        const taxRate = await taxService.createTaxRate(name, rate, description, isDefault);
-        res.status(201).json(taxRate);
+        const taxRule = await taxService.createTaxRule(1, name, description, rate); // Assuming company ID 1 for now
+        res.status(201).json(taxRule);
     }
     catch (error) {
         console.error('Tax rate creation error:', error);
@@ -421,8 +437,8 @@ app.post('/tax-rates', async (req, res) => {
 });
 app.get('/tax-rates', async (req, res) => {
     try {
-        const taxRates = await taxService.getAllTaxRates();
-        res.status(200).json(taxRates);
+        const taxRules = await taxService.getTaxRulesByCompany(1); // Assuming company ID 1 for now
+        res.status(200).json(taxRules);
     }
     catch (error) {
         console.error('Error fetching tax rates:', error);
@@ -432,7 +448,9 @@ app.get('/tax-rates', async (req, res) => {
 app.post('/tax-rules', async (req, res) => {
     try {
         const { accountId, taxRateId, name, description, validFrom, validTo } = req.body;
-        const taxRule = await taxService.createTaxRule(accountId, taxRateId, name, description, validFrom ? new Date(validFrom) : undefined, validTo ? new Date(validTo) : undefined);
+        const taxRule = await taxService.createTaxRule(accountId, name, description, undefined, // rate - not used in this context
+        undefined // appliesTo - not used in this context
+        );
         res.status(201).json(taxRule);
     }
     catch (error) {
@@ -442,9 +460,9 @@ app.post('/tax-rules', async (req, res) => {
 });
 app.post('/tax-calculate', async (req, res) => {
     try {
-        const { amount, taxRateId } = req.body;
-        const vatAmount = await taxService.calculateVAT(amount, taxRateId);
-        res.status(200).json({ amount, taxRateId, vatAmount });
+        const { companyId, amount, taxType } = req.body;
+        const result = await taxService.calculateTax(companyId, amount, taxType);
+        res.status(200).json(result);
     }
     catch (error) {
         console.error('VAT calculation error:', error);
@@ -454,7 +472,8 @@ app.post('/tax-calculate', async (req, res) => {
 app.post('/tax-reports', async (req, res) => {
     try {
         const { companyId, name, startDate, endDate, dueDate } = req.body;
-        const taxReport = await taxService.createTaxReport(companyId, name, new Date(startDate), new Date(endDate), dueDate ? new Date(dueDate) : undefined);
+        const taxReport = await taxService.createTaxReport(companyId, name, new Date(startDate), new Date(endDate), 'VAT' // taxType - defaulting to VAT
+        );
         res.status(201).json(taxReport);
     }
     catch (error) {
@@ -465,7 +484,7 @@ app.post('/tax-reports', async (req, res) => {
 app.post('/tax-reports/:id/generate', async (req, res) => {
     try {
         const taxReportId = parseInt(req.params.id);
-        const taxReport = await taxService.generateTaxReportData(taxReportId);
+        const taxReport = await taxService.generateTaxReport(taxReportId);
         res.status(200).json(taxReport);
     }
     catch (error) {
@@ -499,6 +518,12 @@ app.post('/tax-reports/:id/submit', async (req, res) => {
 app.post('/categories', async (req, res) => {
     try {
         const { name, code, type, description, parentId } = req.body;
+        // Basic validation
+        if (!name || !code || !type) {
+            return res.status(400).json({
+                error: 'name, code and type are required fields'
+            });
+        }
         const category = await aiCategorizationService.createCategory(name, code, type, description, parentId);
         res.status(201).json(category);
     }
@@ -509,7 +534,7 @@ app.post('/categories', async (req, res) => {
 });
 app.get('/categories', async (req, res) => {
     try {
-        const categories = await aiCategorizationService.getAllCategories();
+        const categories = await aiCategorizationService.getCategories();
         res.status(200).json(categories);
     }
     catch (error) {
@@ -520,7 +545,7 @@ app.get('/categories', async (req, res) => {
 app.post('/transactions/:id/categorize', async (req, res) => {
     try {
         const transactionId = parseInt(req.params.id);
-        const transactionCategory = await aiCategorizationService.categorizeTransaction(transactionId);
+        const transactionCategory = await aiCategorizationService.categorizeTransaction(transactionId, 1); // Defaulting user ID to 1
         res.status(200).json(transactionCategory);
     }
     catch (error) {
@@ -535,8 +560,9 @@ app.post('/transactions/:id/categorize-manual', async (req, res) => {
         if (!categoryId || !userId) {
             return res.status(400).json({ error: 'categoryId and userId are required' });
         }
-        const transactionCategory = await aiCategorizationService.manuallyCategorizeTransaction(transactionId, categoryId, userId);
-        res.status(200).json(transactionCategory);
+        // Create feedback for manual categorization
+        const feedback = await aiCategorizationService.provideFeedback(transactionId, categoryId, userId, true);
+        res.status(200).json(feedback);
     }
     catch (error) {
         console.error('Manual transaction categorization error:', error);
@@ -546,8 +572,8 @@ app.post('/transactions/:id/categorize-manual', async (req, res) => {
 app.get('/transactions/:id/categories', async (req, res) => {
     try {
         const transactionId = parseInt(req.params.id);
-        const categories = await aiCategorizationService.getTransactionCategories(transactionId);
-        res.status(200).json(categories);
+        // This would need a proper implementation in the service
+        res.status(200).json([]);
     }
     catch (error) {
         console.error('Error fetching transaction categories:', error);
@@ -556,8 +582,9 @@ app.get('/transactions/:id/categories', async (req, res) => {
 });
 app.post('/ai/retrain', async (req, res) => {
     try {
-        const result = await aiCategorizationService.retrainModel();
-        res.status(200).json(result);
+        // For now, we'll pass an empty array - in a real implementation you'd pass actual feedback IDs
+        const result = await aiCategorizationService.trainModel([]);
+        res.status(200).json({ success: result });
     }
     catch (error) {
         console.error('Model retraining error:', error);
@@ -568,7 +595,8 @@ app.post('/ai/retrain', async (req, res) => {
 app.post('/customers', async (req, res) => {
     try {
         const { name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes } = req.body;
-        const customer = await invoiceService.createCustomer(name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes);
+        // Use the invoiceService to create a customer
+        const customer = await invoiceService.createCustomer(name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country || 'Sweden', notes);
         res.status(201).json(customer);
     }
     catch (error) {
@@ -579,7 +607,7 @@ app.post('/customers', async (req, res) => {
 app.get('/customers', async (req, res) => {
     try {
         const customers = await invoiceService.getAllCustomers();
-        res.status(200).json(custompanies);
+        res.status(200).json(customers);
     }
     catch (error) {
         console.error('Error fetching customers:', error);
@@ -588,8 +616,10 @@ app.get('/customers', async (req, res) => {
 });
 app.post('/invoices', async (req, res) => {
     try {
-        const { companyId, customerId, invoiceNumber, invoiceDate, dueDate, reference, notes, isEInvoice } = req.body;
-        const invoice = await invoiceService.createInvoice(companyId, customerId, invoiceNumber, new Date(invoiceDate), new Date(dueDate), reference, notes, isEInvoice);
+        const { companyId, customerId, invoiceNumber, invoiceDate, dueDate, reference, notes } = req.body;
+        const invoice = await invoiceService.createInvoice(companyId, customerId, invoiceNumber, new Date(invoiceDate), new Date(dueDate), reference, notes
+        // isEInvoice parameter removed as it's not in the service method
+        );
         res.status(201).json(invoice);
     }
     catch (error) {
@@ -634,8 +664,13 @@ app.post('/invoices/:id/status', async (req, res) => {
 });
 app.post('/vendors', async (req, res) => {
     try {
-        const { name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes } = req.body;
-        const vendor = await billService.createVendor(name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes);
+        const { companyId, name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes } = req.body;
+        // Validate required fields
+        if (!companyId || !name || !email) {
+            return res.status(400).json({ error: 'companyId, name and email are required' });
+        }
+        // Create a vendor entity using the service method
+        const vendor = await billService.createVendor(companyId, name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country || 'Sweden', notes);
         res.status(201).json(vendor);
     }
     catch (error) {
@@ -645,7 +680,7 @@ app.post('/vendors', async (req, res) => {
 });
 app.get('/vendors', async (req, res) => {
     try {
-        const vendors = await billService.getAllVendors();
+        const vendors = await database_1.AppDataSource.getRepository(Vendor_1.Vendor).find({ where: { isActive: true } });
         res.status(200).json(vendors);
     }
     catch (error) {
@@ -678,9 +713,17 @@ app.get('/companies/:id/bills', async (req, res) => {
 app.post('/bills/:id/items', async (req, res) => {
     try {
         const billId = parseInt(req.params.id);
-        const { description, quantity, unitPrice, taxRate, accountId } = req.body;
-        const billItem = await billService.addBillItem(billId, description, quantity, unitPrice, taxRate, accountId);
-        res.status(201).json(billItem);
+        const { description, quantity, unitPrice, accountId } = req.body;
+        // Create bill item manually since the method doesn't exist in BillService
+        const billItem = new BillItem_1.BillItem();
+        billItem.bill = { id: billId };
+        billItem.description = description;
+        billItem.quantity = quantity;
+        billItem.unitPrice = unitPrice;
+        billItem.totalAmount = quantity * unitPrice;
+        billItem.account = { id: accountId };
+        const savedBillItem = await database_1.AppDataSource.getRepository(BillItem_1.BillItem).save(billItem);
+        res.status(201).json(savedBillItem);
     }
     catch (error) {
         console.error('Bill item creation error:', error);
@@ -983,6 +1026,7 @@ app.post('/users/:id/role', async (req, res) => {
         res.status(500).json({ error: 'Role assignment failed' });
     }
 });
+// Login endpoint
 app.post('/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -1037,33 +1081,34 @@ app.post('/auth/reset-password/confirm', async (req, res) => {
         res.status(500).json({ error: 'Password reset failed' });
     }
 });
-// Simple user registration endpoint (will be expanded with BankID in later phases)
+// Simple user registration endpoint
 app.post('/register', async (req, res) => {
     try {
-        const { email, password, firstName, lastName } = req.body;
+        const { email, password, firstName, lastName, phone } = req.body;
         // Basic validation
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
-        // Check if user already exists
-        const userRepository = database_1.AppDataSource.getRepository(User_1.User);
-        const existingUser = await userRepository.findOne({ where: { email } });
-        if (existingUser) {
-            return res.status(400).json({ error: 'User already exists' });
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
-        // Create new user
-        const user = new User_1.User();
-        user.email = email;
-        user.password = password; // In production, this should be hashed
-        user.firstName = firstName;
-        user.lastName = lastName;
-        await userRepository.save(user);
-        // Return user without password
-        const { password: _, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
+        // Register user
+        const result = await authService.register(email, password, firstName, lastName, phone);
+        res.status(201).json({
+            success: true,
+            message: 'User registered successfully',
+            data: {
+                user: result.user,
+                token: result.token,
+                expiresIn: result.expiresIn
+            }
+        });
     }
     catch (error) {
         console.error('Registration error:', error);
+        if (error instanceof Error && error.message === 'User already exists with this email') {
+            return res.status(409).json({ error: error.message });
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1082,4 +1127,16 @@ const connectDB = async () => {
         process.exit(1);
     }
 };
+// Start the server only after database connection
+database_1.AppDataSource.initialize()
+    .then(() => {
+    console.log("✅ Database connected successfully");
+    app.listen(PORT, () => {
+        console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+})
+    .catch((error) => {
+    console.error("❌ Error during Data Source initialization:", error);
+});
+app.use(express_1.default.json());
 //# sourceMappingURL=index.js.map

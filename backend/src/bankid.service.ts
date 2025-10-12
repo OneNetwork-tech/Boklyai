@@ -1,97 +1,217 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import fs from 'fs';
 import https from 'https';
+import path from 'path';
+
+export interface BankIDAuthRequest {
+  personalNumber?: string;
+  endUserIp: string;
+}
+
+export interface BankIDAuthResponse {
+  orderRef: string;
+  autoStartToken: string;
+  qrStartToken?: string;
+  qrStartSecret?: string;
+}
+
+export interface BankIDCollectResponse {
+  orderRef: string;
+  status: 'pending' | 'complete' | 'failed';
+  hintCode?: string;
+  completionData?: {
+    user: {
+      personalNumber: string;
+      name: string;
+      givenName: string;
+      surname: string;
+    };
+    device: {
+      ipAddress: string;
+    };
+    cert: {
+      notBefore: string;
+      notAfter: string;
+    };
+    signature: string;
+    ocspResponse: string;
+  };
+}
+
+export interface BankIDError {
+  errorCode: string;
+  details: string;
+}
 
 export class BankIDService {
+  private axiosInstance: AxiosInstance;
   private baseUrl: string;
-  private clientCertificate: Buffer;
-  private clientCertificateKey: Buffer;
-  private caCertificate: Buffer;
-  private axiosInstance: any;
+  private certPath: string;
+  private keyPath: string;
+  private caPath: string;
 
   constructor() {
-    // For testing purposes, we'll use the test environment
-    this.baseUrl = 'https://appapi2.test.bankid.com/rp/v5.1';
-    
-    // In a real implementation, you would load actual test certificates
-    // For now, we'll prepare the structure for when we have access to test certificates
+    // Determine environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    this.baseUrl = isProduction 
+      ? 'https://appapi2.bankid.com/rp/v5.1' 
+      : 'https://appapi2.test.bankid.com/rp/v5.1';
+
+    // Set certificate paths based on environment
+    this.certPath = process.env.BANKID_CERT_PATH || 
+      path.join(__dirname, '..', 'certs', 'bankid', isProduction ? 'production' : 'test', 'cert.pem');
+    this.keyPath = process.env.BANKID_KEY_PATH || 
+      path.join(__dirname, '..', 'certs', 'bankid', isProduction ? 'production' : 'test', 'key.pem');
+    this.caPath = process.env.BANKID_CA_PATH || 
+      path.join(__dirname, '..', 'certs', 'bankid', isProduction ? 'production' : 'test', 'ca.pem');
+
+    // Create HTTPS agent with certificates
+    const httpsAgent = new https.Agent({
+      cert: this.readCertificate(this.certPath),
+      key: this.readCertificate(this.keyPath),
+      ca: this.readCertificate(this.caPath),
+      rejectUnauthorized: true
+    });
+
+    // Create axios instance
+    this.axiosInstance = axios.create({
+      baseURL: this.baseUrl,
+      httpsAgent,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000, // 30 second timeout
+    });
+
+    // Add response interceptor for error handling
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.data) {
+          throw new BankIDErrorWrapper(error.response.data.errorCode, error.response.data.details);
+        }
+        throw error;
+      }
+    );
+  }
+
+  private readCertificate(filePath: string): Buffer {
     try {
-      // These paths would point to actual test certificates in a real implementation
-      // this.clientCertificate = fs.readFileSync('path/to/client/certificate.pem');
-      // this.clientCertificateKey = fs.readFileSync('path/to/client/key.pem');
-      // this.caCertificate = fs.readFileSync('path/to/ca/certificate.pem');
-      
-      // Create an axios instance with certificate authentication
-      // this.axiosInstance = axios.create({
-      //   baseURL: this.baseUrl,
-      //   httpsAgent: new https.Agent({
-      //     cert: this.clientCertificate,
-      //     key: this.clientCertificateKey,
-      //     ca: this.caCertificate,
-      //     rejectUnauthorized: true
-      //   })
-      // });
-    } catch (error) {
-      console.warn('BankID certificates not found. Service will not be functional until certificates are provided.');
+      return fs.readFileSync(filePath);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to read certificate file: ${filePath}. Error: ${error.message}`);
+      }
+      throw new Error(`Failed to read certificate file: ${filePath}. Unknown error occurred.`);
     }
   }
 
   /**
    * Initiate an authentication order
-   * @param personalNumber The personal number of the user (optional)
-   * @param endUserIp The IP address of the user
    */
-  async authenticate(personalNumber?: string, endUserIp?: string): Promise<any> {
-    // This is a mock implementation as we don't have actual test certificates
-    // In a real implementation, this would make an actual API call to BankID
-    console.log('BankID authentication initiated', { personalNumber, endUserIp });
-    
-    // Mock response that would normally come from BankID API
-    return {
-      orderRef: 'mock-order-ref-' + Date.now(),
-      autoStartToken: 'mock-auto-start-token-' + Date.now(),
-      qrStartToken: 'mock-qr-start-token-' + Date.now(),
-      qrStartSecret: 'mock-qr-start-secret-' + Date.now()
-    };
+  async authenticate(authRequest: BankIDAuthRequest): Promise<BankIDAuthResponse> {
+    try {
+      const response = await this.axiosInstance.post('/auth', authRequest);
+      return response.data;
+    } catch (error) {
+      console.error('BankID authentication error:', error);
+      throw error;
+    }
   }
 
   /**
    * Collect the result of an authentication order
-   * @param orderRef The order reference from the authenticate call
    */
-  async collect(orderRef: string): Promise<any> {
-    // This is a mock implementation as we don't have actual test certificates
-    // In a real implementation, this would make an actual API call to BankID
-    
-    // Mock response that simulates a successful authentication
-    return {
-      orderRef,
-      status: 'complete',
-      completionData: {
-        user: {
-          personalNumber: '199012311234', // Mock personal number
-          name: 'Test User',
-          givenName: 'Test',
-          surname: 'User'
-        },
-        device: {
-          ipAddress: '127.0.0.1'
-        },
-        cert: {
-          notBefore: '1506239177',
-          notAfter: '1537775177'
-        }
-      }
-    };
+  async collect(orderRef: string): Promise<BankIDCollectResponse> {
+    try {
+      const response = await this.axiosInstance.post('/collect', { orderRef });
+      return response.data;
+    } catch (error) {
+      console.error('BankID collect error:', error);
+      throw error;
+    }
   }
 
   /**
    * Cancel an authentication order
-   * @param orderRef The order reference from the authenticate call
    */
   async cancel(orderRef: string): Promise<void> {
-    // This is a mock implementation as we don't have actual test certificates
-    // In a real implementation, this would make an actual API call to BankID
-    console.log('BankID authentication cancelled', { orderRef });
+    try {
+      await this.axiosInstance.post('/cancel', { orderRef });
+    } catch (error) {
+      console.error('BankID cancel error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get QR code data for authentication
+   */
+  getQRCodeData(autoStartToken: string, qrStartToken?: string, qrStartSecret?: string): string {
+    if (!qrStartToken || !qrStartSecret) {
+      return `bankid.${autoStartToken}.${Date.now()}`;
+    }
+
+    const time = Math.floor(Date.now() / 1000);
+    const qrAuthCode = this.generateQRAuthCode(qrStartSecret, time);
+    return `bankid.${qrStartToken}.${time}.${qrAuthCode}`;
+  }
+
+  private generateQRAuthCode(qrStartSecret: string, time: number): string {
+    // This is a simplified version - in a real implementation, you'd use proper crypto
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', qrStartSecret);
+    hmac.update(time.toString());
+    return hmac.digest('hex').substring(0, 16);
+  }
+
+  /**
+   * Validate personal number format (YYYYMMDDXXXX)
+   */
+  validatePersonalNumber(personalNumber: string): boolean {
+    const regex = /^\d{12}$/;
+    if (!regex.test(personalNumber)) {
+      return false;
+    }
+
+    // Basic validation of birth date
+    const year = parseInt(personalNumber.substring(0, 4));
+    const month = parseInt(personalNumber.substring(4, 6));
+    const day = parseInt(personalNumber.substring(6, 8));
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return false;
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (year < 1900 || year > currentYear) {
+      return false;
+    }
+
+    return true;
   }
 }
+
+export class BankIDErrorWrapper extends Error {
+  public errorCode: string;
+  public details: string;
+
+  constructor(errorCode: string, details: string) {
+    super(`BankID Error: ${errorCode} - ${details}`);
+    this.name = 'BankIDError';
+    this.errorCode = errorCode;
+    this.details = details;
+  }
+}
+
+// Common BankID error codes
+export const BankIDErrorCodes = {
+  ALREADY_IN_PROGRESS: 'alreadyInProgress',
+  INVALID_PARAMETERS: 'invalidParameters',
+  UNAUTHORIZED: 'unauthorized',
+  NOT_FOUND: 'notFound',
+  REQUEST_TIMEOUT: 'requestTimeout',
+  UNSUPPORTED_MEDIA_TYPE: 'unsupportedMediaType',
+  INTERNAL_ERROR: 'internalError',
+  MAINTENANCE: 'maintenance'
+};

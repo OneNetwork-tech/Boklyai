@@ -16,6 +16,8 @@ services:
     networks:
       - boklyai_network
 
+
+
   # Backend API
   backend:
     build: 
@@ -28,7 +30,7 @@ services:
       - DATABASE_USERNAME=boklyai
       - DATABASE_PASSWORD=boklyai_password
       - DATABASE_NAME=boklyai_db
-      - JWT_SECRET=boklyai_jwt_secret
+      - JWT_SECRET=d45fb637b4d243a98e59e42796623a48c826a5683e29e1d09156f26b9e5bf37b
       - NODE_ENV=production
     ports:
       - "3000:3000"

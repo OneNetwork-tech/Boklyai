@@ -7,6 +7,7 @@ export declare class BankService {
     private bankAccountRepository;
     private bankTransactionRepository;
     private transactionRepository;
+    private companyRepository;
     /**
      * Create a new bank
      * @param name Bank name

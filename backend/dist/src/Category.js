@@ -45,8 +45,8 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Category.prototype, "isActive", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true, type: 'int' }),
-    __metadata("design:type", Object)
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Number)
 ], Category.prototype, "parentId", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),

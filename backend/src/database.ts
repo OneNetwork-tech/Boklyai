@@ -73,5 +73,8 @@ export const AppDataSource = new DataSource({
     AuditLog
   ],
   subscribers: [],
-  migrations: [],
+   
+  // Add migration configuration to datasource
+  migrations: ['src/migrations/*.ts'],
+  migrationsTableName: 'migrations',
 });

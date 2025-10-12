@@ -31,6 +31,24 @@ interface BankAccountData {
   bic?: string;
 }
 
+// api.ts
+export async function login(data: { email: string; password: string }) {
+  const res = await fetch("http://localhost:3001/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",   // ✅ must be set
+    },
+    body: JSON.stringify(data),             // ✅ only stringify once
+  });
+
+  if (!res.ok) {
+    throw new Error("Login failed");
+  }
+
+  return res.json();
+}
+
+
 class ApiService {
   // Authentication
   async login(data: LoginData) {

@@ -29,7 +29,7 @@ class BillService {
         bill.billNumber = billNumber;
         bill.billDate = billDate;
         bill.dueDate = dueDate;
-        bill.amount = amount;
+        bill.totalAmount = amount;
         bill.description = description || '';
         bill.reference = reference || '';
         bill.notes = notes || '';
@@ -72,8 +72,7 @@ class BillService {
             throw new Error('Bill not found');
         }
         bill.status = 'PAID';
-        bill.paymentDate = paymentDate;
-        bill.paymentMethod = paymentMethod;
+        // Removed paymentDate and paymentMethod assignments as they don't exist in the entity
         return await this.billRepository.save(bill);
     }
     /**
@@ -108,7 +107,7 @@ class BillService {
      */
     async deleteBill(billId) {
         const result = await this.billRepository.delete(billId);
-        return result.affected !== null && result.affected > 0;
+        return (result.affected ?? 0) > 0;
     }
     /**
      * Get bill statistics
@@ -120,8 +119,52 @@ class BillService {
         const paid = bills.filter(b => b.status === 'PAID').length;
         const overdue = bills.filter(b => b.status === 'OVERDUE').length;
         const draft = bills.filter(b => b.status === 'DRAFT').length;
-        const totalAmount = bills.reduce((sum, bill) => sum + bill.amount, 0);
+        const totalAmount = bills.reduce((sum, bill) => sum + bill.totalAmount, 0);
         return { total, paid, overdue, draft, totalAmount };
+    }
+    /**
+     * Create a new vendor
+     * @param companyId Company ID
+     * @param name Vendor name
+     * @param organizationNumber Organization number
+     * @param vatNumber VAT number
+     * @param contactPerson Contact person
+     * @param email Email
+     * @param phone Phone
+     * @param address Address
+     * @param postalCode Postal code
+     * @param city City
+     * @param country Country
+     * @param notes Notes
+     */
+    async createVendor(companyId, name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes) {
+        const vendor = new Vendor_1.Vendor();
+        vendor.name = name;
+        vendor.organizationNumber = organizationNumber;
+        vendor.vatNumber = vatNumber;
+        vendor.contactPerson = contactPerson;
+        vendor.email = email;
+        vendor.phone = phone;
+        vendor.address = address;
+        vendor.postalCode = postalCode;
+        vendor.city = city;
+        vendor.country = country;
+        vendor.notes = notes;
+        vendor.isActive = true;
+        return await this.vendorRepository.save(vendor);
+    }
+    /**
+     * Get all vendors
+     */
+    async getAllVendors() {
+        return await this.vendorRepository.find({ where: { isActive: true } });
+    }
+    /**
+     * Get vendor by ID
+     * @param id Vendor ID
+     */
+    async getVendorById(id) {
+        return await this.vendorRepository.findOneBy({ id, isActive: true });
     }
 }
 exports.BillService = BillService;

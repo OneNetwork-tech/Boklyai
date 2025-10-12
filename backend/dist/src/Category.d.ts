@@ -7,7 +7,7 @@ export declare class Category {
     description: string;
     type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
     isActive: boolean;
-    parentId: number | null;
+    parentId: number;
     createdAt: Date;
     updatedAt: Date;
     transactionCategories: TransactionCategory[];

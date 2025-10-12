@@ -79,9 +79,8 @@ class InvoiceService {
         const subtotal = quantity * unitPrice;
         const taxAmount = subtotal * (taxRate / 100);
         const totalAmount = subtotal + taxAmount;
-        invoiceItem.subtotal = subtotal;
-        invoiceItem.taxAmount = taxAmount;
         invoiceItem.totalAmount = totalAmount;
+        invoiceItem.taxAmount = taxAmount;
         // Update invoice totals
         invoice.subtotal += subtotal;
         invoice.taxAmount += taxAmount;
@@ -108,14 +107,12 @@ class InvoiceService {
      * @param paymentDate Payment date
      * @param paymentMethod Payment method
      */
-    async markInvoiceAsPaid(invoiceId, paymentDate, paymentMethod) {
+    async markInvoiceAsPaid(invoiceId) {
         const invoice = await this.invoiceRepository.findOneBy({ id: invoiceId });
         if (!invoice) {
             throw new Error('Invoice not found');
         }
         invoice.status = 'PAID';
-        invoice.paymentDate = paymentDate;
-        invoice.paymentMethod = paymentMethod;
         return await this.invoiceRepository.save(invoice);
     }
     /**
@@ -145,12 +142,55 @@ class InvoiceService {
         });
     }
     /**
+     * Create a new customer
+     * @param name Customer name
+     * @param organizationNumber Organization number
+     * @param vatNumber VAT number
+     * @param contactPerson Contact person
+     * @param email Email
+     * @param phone Phone
+     * @param address Address
+     * @param postalCode Postal code
+     * @param city City
+     * @param country Country
+     * @param notes Notes
+     */
+    async createCustomer(name, organizationNumber, vatNumber, contactPerson, email, phone, address, postalCode, city, country, notes) {
+        const customer = new Customer_1.Customer();
+        customer.name = name;
+        customer.organizationNumber = organizationNumber;
+        customer.vatNumber = vatNumber;
+        customer.contactPerson = contactPerson;
+        customer.email = email;
+        customer.phone = phone;
+        customer.address = address;
+        customer.postalCode = postalCode;
+        customer.city = city;
+        customer.country = country;
+        customer.notes = notes;
+        customer.isActive = true;
+        return await this.customerRepository.save(customer);
+    }
+    /**
+     * Get all customers
+     */
+    async getAllCustomers() {
+        return await this.customerRepository.find({ where: { isActive: true } });
+    }
+    /**
+     * Get customer by ID
+     * @param id Customer ID
+     */
+    async getCustomerById(id) {
+        return await this.customerRepository.findOneBy({ id, isActive: true });
+    }
+    /**
      * Delete an invoice
      * @param invoiceId Invoice ID
      */
     async deleteInvoice(invoiceId) {
         const result = await this.invoiceRepository.delete(invoiceId);
-        return result.affected !== null && result.affected > 0;
+        return (result.affected ?? 0) > 0;
     }
     /**
      * Get invoice statistics

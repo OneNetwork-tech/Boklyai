@@ -7,6 +7,16 @@ export declare class SecurityService {
     private roleRepository;
     private permissionRepository;
     private auditLogRepository;
+    private jwtSecret;
+    private tokenExpiry;
+    private getJwtSecret;
+    private getTokenExpiry;
+    /**
+     * Parse JWT expiry string to milliseconds
+     * @param expiry Expiry string like '1h', '30m', '1d'
+     * @returns Number of milliseconds
+     */
+    private parseJwtExpiry;
     /**
      * Create a new role
      * @param name Role name

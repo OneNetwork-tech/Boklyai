@@ -63,8 +63,17 @@ export class User {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
+    // Only hash if password is modified or new
     if (this.password) {
-      this.password = await bcrypt.hash(this.password, 10);
+      // Check if already hashed (starts with $2b$)
+      if (!this.password.startsWith('$2b$')) {
+        this.password = await bcrypt.hash(this.password, 12);
+      }
     }
+  }
+
+  // Method to validate password
+  async validatePassword(password: string): Promise<boolean> {
+    return bcrypt.compare(password, this.password);
   }
 }

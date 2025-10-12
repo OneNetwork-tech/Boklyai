@@ -3,7 +3,6 @@ import { TaxRule } from './TaxRule';
 export declare class TaxService {
     private taxReportRepository;
     private taxRuleRepository;
-    private transactionRepository;
     /**
      * Create a new tax report
      * @param companyId Company ID
@@ -12,7 +11,7 @@ export declare class TaxService {
      * @param periodEnd Period end date
      * @param taxType Tax type
      */
-    createTaxReport(companyId: number, name: string, periodStart: Date, periodEnd: Date, taxType: string): Promise<TaxReport>;
+    createTaxReport(companyId: number, name: string, startDate: Date, endDate: Date, taxType: string): Promise<TaxReport>;
     /**
      * Get tax reports by company
      * @param companyId Company ID
@@ -20,17 +19,9 @@ export declare class TaxService {
     getTaxReportsByCompany(companyId: number): Promise<TaxReport[]>;
     /**
      * Generate tax report data
-     * @param reportId Report ID
+     * @param taxReportId Tax report ID
      */
-    generateTaxReport(reportId: number): Promise<TaxReport>;
-    /**
-     * Calculate tax data
-     * @param companyId Company ID
-     * @param periodStart Period start date
-     * @param periodEnd Period end date
-     * @param taxType Tax type
-     */
-    private calculateTaxData;
+    generateTaxReport(taxReportId: number): Promise<TaxReport>;
     /**
      * Create a new tax rule
      * @param companyId Company ID
@@ -39,23 +30,19 @@ export declare class TaxService {
      * @param rate Tax rate
      * @param appliesTo What the rule applies to
      */
-    createTaxRule(companyId: number, name: string, description?: string, rate?: number, appliesTo?: string): Promise<TaxRule>;
+    createTaxRule(accountId: number, name: string, description: string, rate?: number, appliesTo?: string): Promise<TaxRule>;
     /**
      * Get tax rules by company
      * @param companyId Company ID
      */
     getTaxRulesByCompany(companyId: number): Promise<TaxRule[]>;
     /**
-     * Calculate tax for a specific amount
+     * Calculate tax for an amount
      * @param companyId Company ID
      * @param amount Amount to calculate tax for
      * @param taxType Tax type
      */
-    calculateTax(companyId: number, amount: number, taxType: string): Promise<{
-        amount: number;
-        tax: number;
-        total: number;
-    }>;
+    calculateTax(companyId: number, amount: number, taxType: string): Promise<number>;
     /**
      * Submit tax report to authorities
      * @param reportId Report ID

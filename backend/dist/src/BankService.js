@@ -6,12 +6,14 @@ const Bank_1 = require("./Bank");
 const BankAccount_1 = require("./BankAccount");
 const BankTransaction_1 = require("./BankTransaction");
 const Transaction_1 = require("./Transaction");
+const Company_1 = require("./Company");
 class BankService {
     constructor() {
         this.bankRepository = database_1.AppDataSource.getRepository(Bank_1.Bank);
         this.bankAccountRepository = database_1.AppDataSource.getRepository(BankAccount_1.BankAccount);
         this.bankTransactionRepository = database_1.AppDataSource.getRepository(BankTransaction_1.BankTransaction);
         this.transactionRepository = database_1.AppDataSource.getRepository(Transaction_1.Transaction);
+        this.companyRepository = database_1.AppDataSource.getRepository(Company_1.Company);
     }
     /**
      * Create a new bank
@@ -60,7 +62,11 @@ class BankService {
     async createBankAccount(companyId, bankId, accountName, accountNumber, iban, bic) {
         const bankAccount = new BankAccount_1.BankAccount();
         // Use relation objects instead of direct IDs
-        bankAccount.company = { id: companyId };
+        const company = await this.companyRepository.findOneBy({ id: companyId });
+        if (!company) {
+            throw new Error('Company not found');
+        }
+        bankAccount.company = company;
         bankAccount.bank = { id: bankId };
         bankAccount.accountName = accountName;
         bankAccount.accountNumber = accountNumber;

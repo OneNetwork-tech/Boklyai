@@ -5,16 +5,7 @@ export declare class AICategorizationService {
     private categoryRepository;
     private categorizationFeedbackRepository;
     /**
-     * Create a new category
-     * @param name Category name
-     * @param code Category code
-     * @param type Category type (INCOME, EXPENSE, TRANSFER)
-     * @param description Category description
-     * @param parentId Parent category ID (for hierarchical categories)
-     */
-    createCategory(name: string, code: string, type: 'INCOME' | 'EXPENSE' | 'TRANSFER', description?: string, parentId?: number): Promise<Category>;
-    /**
-     * Categorize a transaction using AI
+     
      * @param transactionId Transaction ID
      * @param userId User ID (for feedback tracking)
      */
@@ -45,6 +36,27 @@ export declare class AICategorizationService {
      * @param feedbackIds Array of feedback IDs to use for training
      */
     trainModel(feedbackIds: number[]): Promise<boolean>;
+    /**
+     * Get all categories
+     */
+    getCategories(): Promise<Category[]>;
+    /**
+     * Create a new category
+     * @param name Category name
+     * @param code Category code
+     * @param type Category type (INCOME, EXPENSE, TRANSFER)
+     * @param description Category description
+     * @param parentId Parent category ID (for hierarchical categories)
+     */
+    createCategory(name: string, code: string, type: 'INCOME' | 'EXPENSE' | 'TRANSFER', description?: string, parentId?: number): Promise<Category>;
+    /**
+     * Provide feedback for categorization
+     * @param transactionId Transaction ID
+     * @param categoryId Category ID
+     * @param userId User ID
+     * @param isCorrect Whether the categorization was correct
+     */
+    provideFeedback(transactionId: number, categoryId: number, userId: number, isCorrect: boolean): Promise<CategorizationFeedback>;
     /**
      * Get categorization accuracy statistics
      */
