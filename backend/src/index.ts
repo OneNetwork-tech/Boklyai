@@ -12,6 +12,7 @@ import { CompanyService } from './CompanyService';
 import { DocumentService } from './DocumentService';
 import { OcrService } from './OcrService';
 import { BankService } from './BankService';
+<<<<<<< Updated upstream
 import { TaxService } from './TaxService';
 import { AICategorizationService } from './AICategorizationService';
 import { InvoiceService } from './InvoiceService';
@@ -25,6 +26,8 @@ import { BillItem } from './BillItem';
 import { BankIDController } from './controllers/BankIDController';
 import { Account } from './Account';
 import { Company } from './Company';
+=======
+>>>>>>> Stashed changes
 import { generateUniqueFilename, ensureUploadDir, saveFileBuffer, getFileBuffer } from './fileUtils';
 import path from 'path';
 import { AuthService } from './services/AuthService';
@@ -54,6 +57,7 @@ const companyService = new CompanyService();
 const documentService = new DocumentService();
 const ocrService = new OcrService();
 const bankService = new BankService();
+<<<<<<< Updated upstream
 const taxService = new TaxService();
 const aiCategorizationService = new AICategorizationService();
 const invoiceService = new InvoiceService();
@@ -62,6 +66,8 @@ const reportingService = new ReportingService();
 const payrollService = new PayrollService();
 const securityService = new SecurityService();
 const authService = new AuthService();
+=======
+>>>>>>> Stashed changes
 
 // Ensure upload directory exists
 ensureUploadDir(UPLOAD_DIR).catch(error => {
@@ -492,6 +498,7 @@ app.post('/bank-transactions/:id/mark-matched', async (req: Request, res: Respon
   }
 });
 
+<<<<<<< Updated upstream
 // VAT and Tax endpoints
 app.post('/tax-rates', async (req: Request, res: Response) => {
   try {
@@ -1268,6 +1275,9 @@ app.post('/auth/reset-password/confirm', async (req: Request, res: Response) => 
 });
 
 // Simple user registration endpoint
+=======
+// Simple user registration endpoint (will be expanded with BankID in later phases)
+>>>>>>> Stashed changes
 app.post('/register', async (req: Request, res: Response) => {
   try {
     const { email, password, firstName, lastName, phone } = req.body;

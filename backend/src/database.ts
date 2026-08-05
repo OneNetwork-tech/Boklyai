@@ -8,6 +8,7 @@ import { Document } from './Document';
 import { Bank } from './Bank';
 import { BankAccount } from './BankAccount';
 import { BankTransaction } from './BankTransaction';
+<<<<<<< Updated upstream
 import { TaxRate } from './TaxRate';
 import { TaxRule } from './TaxRule';
 import { TaxReport } from './TaxReport';
@@ -29,6 +30,8 @@ import { PayrollItem } from './PayrollItem';
 import { Role } from './Role';
 import { Permission } from './Permission';
 import { AuditLog } from './AuditLog';
+=======
+>>>>>>> Stashed changes
 
 // In production, these values should come from environment variables
 export const AppDataSource = new DataSource({
@@ -40,6 +43,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'boklyai_db',
   synchronize: process.env.NODE_ENV !== 'production', // Only for development
   logging: false,
+<<<<<<< Updated upstream
   entities: [
     User, 
     ChartOfAccounts, 
@@ -72,6 +76,9 @@ export const AppDataSource = new DataSource({
     Permission,
     AuditLog
   ],
+=======
+  entities: [User, ChartOfAccounts, Account, Transaction, Company, Document, Bank, BankAccount, BankTransaction],
+>>>>>>> Stashed changes
   subscribers: [],
    
   // Add migration configuration to datasource

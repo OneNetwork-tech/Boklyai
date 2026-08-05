@@ -287,6 +287,7 @@ jest.mock('../src/index', () => {
     ]);
   });
   
+<<<<<<< Updated upstream
   // VAT and Tax endpoints
   app.post('/tax-rates', (req: Request, res: Response) => {
     const { name, rate } = req.body;
@@ -838,6 +839,8 @@ jest.mock('../src/index', () => {
     });
   });
   
+=======
+>>>>>>> Stashed changes
   return app;
 });
 
@@ -1260,6 +1263,7 @@ describe('Backend API Tests', () => {
     expect(res.body[0].description).toBe('Test Transaction');
     expect(res.body[0].amount).toBe(1500.00);
   });
+<<<<<<< Updated upstream
   
   it('should create a tax rate on POST /tax-rates', async () => {
     const express = require('express');
@@ -1898,4 +1902,6 @@ describe('Backend API Tests', () => {
     expect(res.body.user).toBeDefined();
     expect(res.body.token).toBeDefined();
   });
+=======
+>>>>>>> Stashed changes
 });

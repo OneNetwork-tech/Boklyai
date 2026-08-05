@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from './User';
 import { Document } from './Document';
 import { BankAccount } from './BankAccount';
+<<<<<<< Updated upstream
 import { TaxReport } from './TaxReport';
 import { Invoice } from './Invoice';
 import { Bill } from './Bill';
@@ -9,6 +10,8 @@ import { FinancialReport } from './FinancialReport';
 import { Dashboard } from './Dashboard';
 import { Kpi } from './Kpi';
 import { Payroll } from './Payroll';
+=======
+>>>>>>> Stashed changes
 
 @Entity('companies')
 export class Company {
@@ -53,6 +56,7 @@ export class Company {
 
   @OneToMany(() => BankAccount, bankAccount => bankAccount.company)
   bankAccounts!: BankAccount[];
+<<<<<<< Updated upstream
 
   @OneToMany(() => TaxReport, taxReport => taxReport.company)
   taxReports!: TaxReport[];
@@ -74,4 +78,6 @@ export class Company {
 
   @OneToMany(() => Payroll, payroll => payroll.company)
   payrolls!: Payroll[];
+=======
+>>>>>>> Stashed changes
 }
