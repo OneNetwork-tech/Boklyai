@@ -1,70 +1,77 @@
-name: CI Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
-  test-backend:
+  backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: boklyai
+          POSTGRES_PASSWORD: boklyai
+          POSTGRES_DB: boklyai_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U boklyai"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-    - name: Cache node_modules
-      uses: actions/cache@v3
-      with:
-        path: ./backend/node_modules
-        key: backend-node-modules-${{ hashFiles('./backend/package-lock.json') }}
-        restore-keys: |
-          backend-node-modules-
-    - run: npm ci
-      working-directory: ./backend
-    - run: npm test
-      working-directory: ./backend
-      
-  test-frontend:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-    - name: Cache node_modules
-      uses: actions/cache@v3
-      with:
-        path: ./frontend/node_modules
-        key: frontend-node-modules-${{ hashFiles('./frontend/package-lock.json') }}
-        restore-keys: |
-          frontend-node-modules-
-    - run: npm ci
-      working-directory: ./frontend
-    - run: npm test
-      working-directory: ./frontend
-    - run: npm run lint
-      working-directory: ./frontend
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --ci
+        env:
+          TEST_DATABASE_URL: postgres://boklyai:boklyai@localhost:5432/boklyai_test
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
 
-  test-ai:
+  frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    - name: Cache pip packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: python-${{ runner.os }}-pip-${{ hashFiles('./ai-services/requirements.txt') }}
-        restore-keys: |
-          python-${{ runner.os }}-pip-
-    - run: pip install -r requirements.txt
-      working-directory: ./ai-services
-    - run: python -m pytest
-      working-directory: ./ai-services
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t boklyai:ci .
+      - name: Smoke test
+        run: |
+          docker network create bk
+          docker run -d --name db --network bk -e POSTGRES_USER=bk -e POSTGRES_PASSWORD=bk -e POSTGRES_DB=bk postgres:16-alpine
+          for i in $(seq 1 30); do docker exec db pg_isready -U bk && break; sleep 1; done
+          docker run -d --name app --network bk -p 3000:3000 \
+            -e SESSION_SECRET=ci-session-secret-ci-session-secret-1234 \
+            -e DATABASE_URL=postgres://bk:bk@db:5432/bk boklyai:ci
+          for i in $(seq 1 40); do curl -fsS http://localhost:3000/api/health && break; sleep 1; done
+          curl -fsS http://localhost:3000/ | grep -q '<div id="root">'
+          docker exec app tesseract --version
+          docker exec app pdftotext -v
+          docker logs app

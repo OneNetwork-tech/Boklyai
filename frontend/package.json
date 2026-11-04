@@ -1,51 +1,28 @@
 {
   "name": "boklyai-frontend",
   "version": "1.0.0",
-  "license": "UNLICENSED",
-  "description": "Frontend for BoklyAI - Swedish accounting AI system",
-  "main": "src/index.tsx",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "build": "react-scripts build",
-    "start": "react-scripts start",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "vite",
+    "build": "tsc --noEmit -p . && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0",
-    "graphql": "^16.8.0",
-    "i18next": "^25.5.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-i18next": "^15.7.3",
-    "react-router-dom": "^6.15.0"
+    "i18next": "^26.7.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^17.1.12",
+    "react-router-dom": "^7.18.5"
   },
   "devDependencies": {
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/postcss": "^4.1.13",
-    "@tailwindcss/postcss7-compat": "^2.2.17",
-    "@tailwindcss/typography": "^0.5.16",
-    "@types/node": "^20.5.9",
-    "@types/react": "^18.2.21",
-    "@types/react-dom": "^18.2.7",
-    "@types/react-router-dom": "^5.3.3",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "react-scripts": "^5.0.1",
-    "tailwindcss": "^4.1.13",
-    "typescript": "^4.9.5"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5"
   }
 }

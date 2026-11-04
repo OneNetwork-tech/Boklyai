@@ -1,60 +1,49 @@
-version: '3.8'
+# Usage:
+#   cp .env.example .env    # set SESSION_SECRET and POSTGRES_PASSWORD
+#   docker compose up -d --build
+# Open http://localhost:3000
 
 services:
-  # PostgreSQL Database
-  database:
-    image: postgres:15
-    container_name: boklyai_db
+  app:
+    build: .
+    image: boklyai:local
+    restart: unless-stopped
+    env_file: .env
     environment:
-      POSTGRES_USER: boklyai
-      POSTGRES_PASSWORD: boklyai_password
-      POSTGRES_DB: boklyai_db
+      NODE_ENV: production
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "${HOST_PORT:-3000}:3000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - boklyai_network
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
 
-
-
-  # Backend API
-  backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: boklyai_backend
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      - DATABASE_HOST=database
-      - DATABASE_PORT=5432
-      - DATABASE_USERNAME=boklyai
-      - DATABASE_PASSWORD=boklyai_password
-      - DATABASE_NAME=boklyai_db
-      - JWT_SECRET=d45fb637b4d243a98e59e42796623a48c826a5683e29e1d09156f26b9e5bf37b
-      - NODE_ENV=production
-    ports:
-      - "3000:3000"
-    depends_on:
-      - database
-    networks:
-      - boklyai_network
-
-  # Frontend Application
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: boklyai_frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - boklyai_network
+      POSTGRES_DB: ${POSTGRES_DB:-boklyai}
+      POSTGRES_USER: ${POSTGRES_USER:-boklyai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Not published: only the app container can reach the database.
 
 volumes:
-  postgres_data:
-
-networks:
-  boklyai_network:
-    driver: bridge
+  pgdata:
+  uploads:

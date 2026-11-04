@@ -1,88 +1,125 @@
-# BoklyAI - Swedish Accounting AI System
+# BoklyAI – bokföring för svenska företag
 
-BoklyAI is an AI-powered accounting and business management system designed specifically for Swedish businesses. It automates financial processes, ensures tax compliance, and provides intelligent insights for better decision-making.
+BoklyAI is a bookkeeping system for small Swedish companies (AB and enskild firma). It is built on a real double-entry ledger that follows Bokföringslagen and the BAS chart of accounts. It handles customer and supplier invoices, bank reconciliation with AI suggestions, the VAT return (momsdeklaration), the annual close, payroll with AGI support, and SIE4 export. The web interface is in Swedish and English.
 
 ## Features
 
-### Core Accounting
-- Bank integration and transaction import
-- Automated transaction matching and reconciliation
-- Chart of accounts management
-- Double-entry bookkeeping
+| Area | What you get |
+|---|---|
+| **Ledger** | Vouchers (verifikationer) with gapless numbering per series and fiscal year. Vouchers can't be edited; you correct them with a reversing voucher. Period lock, fiscal years and a year-end close that books the result to 2099. Every company gets its own BAS 2024 chart of accounts |
+| **Sales** | Customers, invoice drafts with per-line VAT (25 / 12 / 6 / 0 %), issuing with an invoice number and a Bankgirot OCR reference, ledger posting, part payments, credit notes, overdue tracking and a printable invoice (print to PDF) |
+| **Purchases** | Suppliers and supplier invoices, booked with input VAT (2641) and accounts payable (2440), plus payments. Upload a PDF or photo of the invoice and **OCR fills in the fields** (amount, VAT, dates, org number, OCR reference, invoice number) |
+| **Bank** | CSV import for Swedish bank exports (Swedbank, SEB, Handelsbanken, Nordea, Danske, Lunar…). Re-importing the same file never creates duplicates. **AI suggestions** match transactions to open invoices by OCR reference or amount and propose accounts learned from your own earlier bookings, falling back to built-in patterns for common merchants. One-click booking splits out the VAT |
+| **VAT** | Momsdeklaration boxes 05, 10, 11, 12, 42, 48 and 49, computed from the ledger. Monthly, quarterly or yearly periods. A settlement voucher moves the balances to 2650 |
+| **Reports** | Income statement and balance sheet in K2/K3 layout, trial balance (saldobalans), general ledger (huvudbok) with running balance, a dashboard, and **SIE4 export** in PC8 (CP437) encoding |
+| **Payroll** | Employees with validated personnummer, payroll runs with preliminary tax, employer contributions (31.42 %, or 10.21 % for employees aged 66+), additions and deductions, booking, printable payslips and an AGI summary (ruta 011 and 001) |
+| **Documents** | Receipts and invoices stored privately, with the file type checked by content and OCR text extraction. Documents attached to a voucher can't be deleted (they must be kept for 7 years) |
+| **Users** | Multi-company: one login can belong to several companies. Roles are owner, accountant, member and viewer. Invitations by email, an audit log, and **BankID** login (RP API v6.0) |
 
-### AI-Powered Automation
-- Document processing with OCR
-- Intelligent transaction categorization
-- Predictive analytics and forecasting
-- Anomaly detection
+## Quick start (Docker)
 
-### Tax Compliance
-- VAT calculation and reporting (momsdeklaration)
-- Tax rate management for Swedish rates (25%, 12%, 6%)
-- Tax report generation
+```bash
+cp .env.example .env    # set SESSION_SECRET (openssl rand -hex 32) and POSTGRES_PASSWORD
+docker compose up -d --build
+```
 
-### Financial Management
-- Invoicing and billing (including e-faktura support)
-- Accounts receivable and payable tracking
-- Payroll management with Swedish tax calculations
-- Financial reporting and dashboard visualization
+Open <http://localhost:3000>, create an account, and add your company. A BAS chart of accounts, a fiscal year and a bank account linked to 1930 are created automatically.
 
-### Security & Compliance
-- BankID authentication for Swedish users
-- Role-based access control
-- Audit logging
-- Data encryption
+## Development
 
-## Technology Stack
+You need Node.js 20 or newer and PostgreSQL 13 or newer. OCR additionally needs `tesseract` (with Swedish data) and `pdftotext` (poppler); everything else works without them.
 
-- **Frontend**: React/TypeScript, React Native, GraphQL, Tailwind CSS
-- **Backend**: Node.js/TypeScript, Python for AI/ML components
-- **Database**: PostgreSQL with TypeORM
-- **AI/ML**: TensorFlow/PyTorch, spaCy, Tesseract OCR
-- **Infrastructure**: Docker, Kubernetes, AWS/Azure
+```bash
+# API on :3000 (migrations run automatically)
+cd backend && npm install
+DATABASE_URL=postgres://boklyai:pass@localhost:5432/boklyai npm run dev
 
-## Development Phases
+# Web app on :5173 (proxies /api to :3000)
+cd frontend && npm install && npm run dev
+```
 
-1. **Phase 1**: Core Infrastructure - BankID auth, company management, chart of accounts
-2. **Phase 2**: AI Document Processing - OCR, data extraction, bank integration
-3. **Phase 3**: Transaction Matching & Categorization - Auto-matching, rule engine
-4. **Phase 4**: Tax Compliance - VAT handling, tax reports
-5. **Phase 5**: AI-Powered Categorization - ML models, feedback loop
-6. **Phase 6**: Invoicing & AR/AP Management - Invoice generation, payment tracking
-7. **Phase 7**: Payroll Integration - Employee management, salary calculations
-8. **Phase 8**: Financial Reporting & Dashboard - Financial statements, KPIs
-9. **Phase 9**: Mobile App & Notifications - Mobile UI, real-time alerts
-10. **Phase 10**: Polish, Security & Deployment - RBAC, security audit, deployment
+Without `SMTP_URL`, emails such as password resets and invitations are printed to the API log.
 
-## Deployment
+### Tests
 
-To deploy the application, follow the instructions in [DEPLOYMENT.md](DEPLOYMENT.md).
-
-## Getting Started
-
-### Backend
 ```bash
 cd backend
-npm install
-npm run build
-npm start
+TEST_DATABASE_URL=postgres://boklyai:pass@localhost:5432/boklyai_test npm test
 ```
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm start
+The suite has 69 tests and runs against a real PostgreSQL; it drops and recreates the schema of the test database, so point it at a dedicated one. It covers a full bookkeeping year:
+
+- security: sessions, CSRF, origin checks, login lockout, password reset, BankID, tenant isolation and roles
+- ledger invariants enforced in the database (balance check at commit, immutable vouchers)
+- invoicing and supplier invoices, bank import, matching and learning, documents
+- the VAT return and its settlement, reports, SIE4, payroll, the period lock and the year-end close
+
+CI runs the backend tests against PostgreSQL, builds the frontend, and builds and smoke-tests the Docker image.
+
+## How the accounting works
+
+All amounts are integers in **öre** throughout the API and the database, so floating-point rounding errors can't occur. Each voucher line has a non-negative debit or credit, never both.
+
+| Series | Created by |
+|---|---|
+| A | Manual vouchers |
+| B | Bank transactions booked directly to an account |
+| F | Customer invoices and credit notes |
+| I | Incoming payments on customer invoices |
+| L | Supplier invoices |
+| U | Payments of supplier invoices |
+| P | Payroll |
+| M | VAT settlement |
+| Y | Year-end result |
+
+Rules enforced both in the application and in PostgreSQL:
+
+- **Balance:** debit equals credit, and every voucher has at least two lines. A deferred constraint trigger checks this when the transaction commits.
+- **Immutability:** `UPDATE` and `DELETE` on vouchers and voucher lines raise an error. The only change allowed is setting the "reversed by" link once.
+- **Gapless numbering:** numbers come from a row-locked sequence inside the posting transaction, so a failed posting leaves no gap.
+- **Dates:** a posting must fall in an open fiscal year and after the company's lock date. Closing a year locks it permanently.
+- **Correction from the source:** vouchers created from invoices, payroll or the VAT settlement can't be reversed directly; you correct the source document instead, for example with a credit note.
+
+Opening balances need no separate entries. Balance-sheet accounts (1xxx–2xxx) carry over between fiscal years automatically, and result accounts start from zero in each year.
+
+## Security
+
+- **Sessions:** an opaque random token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie, stored only as a SHA-256 hash. Sessions expire after idle time and after an absolute timeout. Changing or resetting a password signs out other sessions.
+- **CSRF:** a per-session token must be sent in the `X-CSRF-Token` header on every state-changing request, and requests from other origins are rejected.
+- **Passwords:** bcrypt with 12 rounds and a minimum length of 12. Login responses take the same time whether or not the account exists. Accounts lock for 15 minutes after 5 failed attempts, and the auth endpoints are rate-limited.
+- **Password reset:** single-use tokens, stored hashed, valid for 1 hour, sent only by email (never returned by the API). The response is the same whether or not the email is registered.
+- **Tenancy:** every company route checks membership and role. Non-members get `404` for another company, so company IDs can't be probed. Payroll data (personnummer, salaries) is limited to accountants and owners.
+- **Documents:** the file type is detected from the content (PDF, JPEG, PNG or WebP only). Files are stored outside the web root with random names and `0600` permissions, and are served with `nosniff` and a restrictive CSP.
+- **BankID:** RP API v6.0 with mutual TLS. `endUserIp` comes from the connection, never from the client. `qrStartSecret` stays on the server; animated QR codes are computed there. Each order is bound to the browser that started it by an `HttpOnly` cookie.
+- **Browser and database:** strict Content-Security-Policy, `Cache-Control: no-store` on API responses, parameterised SQL everywhere, and an audit log of all changes.
+
+## Configuration
+
+`.env.example` documents every setting. You need `SESSION_SECRET`, the database settings and `PUBLIC_URL`. For BankID in production, set `BANKID_ENABLED=true`, `BANKID_API_URL=https://appapi2.bankid.com/rp/v6.0` and the paths to your RP certificate and key.
+
+## Project layout
+
+```
+backend/
+  src/db/migrations/   SQL schema, including the ledger triggers
+  src/services/        ledger, sales, purchases, bankImport, categorizer, documents (OCR),
+                       payroll, reports (VAT/P&L/BS), sie, bankid, sessions
+  src/routes/          REST API under /api (company routes: /api/companies/:id/...)
+  tests/               unit and PostgreSQL integration tests
+frontend/
+  src/pages/           Dashboard, Sales, Purchases, Bank, Ledger, Reports (+VAT), Payroll, Settings
+  src/i18n.ts          Swedish and English texts
+Dockerfile             one image: the API serves the built SPA; includes tesseract and poppler
 ```
 
-The frontend application can be configured using environment variables:
+## Scope and limitations
 
-- `REACT_APP_API_URL`: The URL to the backend API (default: http://localhost:3000)
-- `REACT_APP_BASE_URL`: The base URL of the application
-- `NODE_ENV`: The environment (development/production)
+BoklyAI covers day-to-day bookkeeping for a domestic Swedish company. It doesn't yet handle:
 
-In development, create a `.env` file in the frontend directory with your configuration.
+- EU and reverse-charge VAT (momsdeklaration boxes 20–39), foreign currency, or e-invoicing over Peppol
+- SIE import (only export is supported)
+- tax tables: preliminary tax uses each employee's percentage; it doesn't look up Skatteverket's tables, and you upload the AGI to Skatteverket yourself
+- reduced employer-contribution rates other than the 66+ rule (for example youth reductions or växa-stöd); you can override the rate on each payslip
+- Skatteverket certification. Have the annual accounts reviewed by an accountant.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The files in `PhaseDevelopmentPlan/` and `docs/` are earlier planning documents; this README describes what is actually implemented.
