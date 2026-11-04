@@ -12,3 +12,4 @@ PhaseDevelopmentPlan
 docs
 backend/tests
 docker-compose*.yml
+deploy

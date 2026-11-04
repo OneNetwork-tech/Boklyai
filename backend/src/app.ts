@@ -44,7 +44,7 @@ export function createApp() {
         'object-src': ["'none'"],
         'frame-src': ["'self'"],
         'frame-ancestors': ["'self'"],
-        'upgrade-insecure-requests': config.isProduction ? [] : null,
+        'upgrade-insecure-requests': config.httpsOnly ? [] : null,
       },
     },
     crossOriginEmbedderPolicy: false,

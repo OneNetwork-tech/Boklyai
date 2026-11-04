@@ -28,3 +28,6 @@ Thumbs.db
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Server secrets for deploy/
+deploy/.env

@@ -48,6 +48,8 @@ export const config = {
   port: int('PORT', 3000),
   publicUrl: process.env.PUBLIC_URL || `http://localhost:${int('PORT', 3000)}`,
   trustProxy: process.env.TRUST_PROXY || 'loopback',
+  // Served over HTTPS (CSP upgrade-insecure-requests + HSTS). Set HTTPS_ONLY=false to test over plain HTTP on a LAN.
+  httpsOnly: bool('HTTPS_ONLY', isProduction),
   databaseUrl: databaseUrl(),
   databaseSsl: bool('POSTGRES_SSL', false),
 
