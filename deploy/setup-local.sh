@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Creates .env for trying BoklyAI on this computer, with freshly generated secrets.
 #
-#   ./setup-local.sh                                  # image tag "latest" (default branch)
-#   ./setup-local.sh claude-charming-noether-lhy664   # the newest build of a branch
+#   ./setup-local.sh              # image tag of the checked-out branch (or "latest")
+#   ./setup-local.sh <image-tag>  # e.g. latest, claude-charming-noether-lhy664 or sha-1a2b3c4
 #
 # Then: ./deploy.sh   and open http://localhost:3002
 # Needs Docker with Compose and openssl. For a real server, edit .env afterwards
@@ -27,13 +27,21 @@ setval() {
   fi
 }
 
-setval IMAGE_TAG "${1:-latest}"
+# Published images are tagged with the branch name (with / replaced by -); main/master is "latest".
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+case "$branch" in
+  ""|HEAD|main|master) default_tag=latest ;;
+  *) default_tag=$(printf '%s' "$branch" | tr '/' '-') ;;
+esac
+TAG="${1:-$default_tag}"
+setval IMAGE_TAG "$TAG"
 setval POSTGRES_PASSWORD "$(openssl rand -hex 16)"
 setval SESSION_SECRET "$(openssl rand -hex 32)"
 setval PUBLIC_URL http://localhost:3002
 setval HTTPS_ONLY false
 setval SECURE_COOKIES false
 
-echo "Created $(pwd)/.env (image tag: ${1:-latest})."
-echo "Next: ./deploy.sh   then open http://localhost:3002"
+echo "Created $(pwd)/.env (image tag: $TAG)."
+echo "Next: ./deploy.sh   (or BUILD=1 ./deploy.sh to build on this computer, no login needed)"
+echo "Then open http://localhost:3002"
 echo "Without SMTP_URL, password-reset emails are printed in: docker compose logs app"
